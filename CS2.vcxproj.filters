@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Hooks">
+      <UniqueIdentifier>{A1B2C3D4-0001-0001-0001-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Features">
+      <UniqueIdentifier>{A1B2C3D4-0002-0002-0002-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SDK">
+      <UniqueIdentifier>{A1B2C3D4-0003-0003-0003-000000000003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Hooks">
+      <UniqueIdentifier>{A1B2C3D4-0004-0004-0004-000000000004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Features">
+      <UniqueIdentifier>{A1B2C3D4-0005-0005-0005-000000000005}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ImGui">
+      <UniqueIdentifier>{A1B2C3D4-0006-0006-0006-000000000006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MinHook">
+      <UniqueIdentifier>{A1B2C3D4-0007-0007-0007-000000000007}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+
+  <!-- Headers -->
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sdk\offsets.h">
+      <Filter>Header Files\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="sdk\structs.h">
+      <Filter>Header Files\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="hooks\present.h">
+      <Filter>Header Files\Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="features\esp.h">
+      <Filter>Header Files\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\aimbot.h">
+      <Filter>Header Files\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\triggerbot.h">
+      <Filter>Header Files\Features</Filter>
+    </ClInclude>
+  </ItemGroup>
+
+  <!-- Project Sources -->
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hooks\present.cpp">
+      <Filter>Source Files\Hooks</Filter>
+    </ClCompile>
+    <ClCompile Include="features\esp.cpp">
+      <Filter>Source Files\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\aimbot.cpp">
+      <Filter>Source Files\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\triggerbot.cpp">
+      <Filter>Source Files\Features</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <!-- ImGui Sources -->
+  <ItemGroup>
+    <ClCompile Include="imgui-master\imgui.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-master\imgui_draw.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-master\imgui_widgets.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-master\imgui_tables.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-master\backends\imgui_impl_dx11.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-master\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <!-- MinHook Sources -->
+  <ItemGroup>
+    <ClCompile Include="minhook-master\src\hook.c">
+      <Filter>Source Files\MinHook</Filter>
+    </ClCompile>
+    <ClCompile Include="minhook-master\src\buffer.c">
+      <Filter>Source Files\MinHook</Filter>
+    </ClCompile>
+    <ClCompile Include="minhook-master\src\trampoline.c">
+      <Filter>Source Files\MinHook</Filter>
+    </ClCompile>
+    <ClCompile Include="minhook-master\src\hde\hde64.c">
+      <Filter>Source Files\MinHook</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

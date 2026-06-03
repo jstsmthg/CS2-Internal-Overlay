@@ -1,0 +1,23 @@
+# Visual Studio / Build Artifacts
+.vs/
+.vscode/
+x64/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.db
+*.opendb
+
+# Local logs and debug files
+*.log
+skindbg.txt
+
+# Generated offsets output (specific to device status)
+output/
+
+# Executables
+*.exe
+
+# Explicitly track cs2-dumper.exe
+!cs2-dumper.exe
