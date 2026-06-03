@@ -1,9 +1,9 @@
 # Visual Studio / Build Artifacts
 .vs/
 .vscode/
-x64/
+CS2/
+x64/Release/CS2.pdb
 [Dd]ebug/
-[Rr]elease/
 *.user
 *.suo
 *.db
