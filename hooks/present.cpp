@@ -54,48 +54,20 @@ static void ResetImGuiState() {
   initialized = false;
 }
 
-// ============================================================================
-// VK key name helper
-// ============================================================================
-static const char *GetVKKeyName(int vk) {
-  switch (vk) {
-  case VK_LBUTTON:  return "Mouse1";
-  case VK_RBUTTON:  return "Mouse2";
-  case VK_MBUTTON:  return "Mouse3";
-  case VK_XBUTTON1: return "Mouse4";
-  case VK_XBUTTON2: return "Mouse5";
-  case VK_LSHIFT:   return "LShift";
-  case VK_RSHIFT:   return "RShift";
-  case VK_LCONTROL: return "LCtrl";
-  case VK_RCONTROL: return "RCtrl";
-  case VK_LMENU:    return "LAlt";
-  case VK_RMENU:    return "RAlt";
-  case VK_CAPITAL:  return "CapsLock";
-  case VK_TAB:      return "Tab";
-  case VK_SPACE:    return "Space";
-  case VK_BACK:     return "Backspace";
-  case VK_ESCAPE:   return "Escape";
-  default: {
-    // A-Z, 0-9
-    if (vk >= 0x30 && vk <= 0x39) { static char buf[2]; buf[0] = (char)vk; buf[1] = 0; return buf; }
-    if (vk >= 0x41 && vk <= 0x5A) { static char buf[2]; buf[0] = (char)vk; buf[1] = 0; return buf; }
-    // F1-F12
-    if (vk >= VK_F1 && vk <= VK_F12) { static char buf[4]; snprintf(buf, sizeof(buf), "F%d", vk - VK_F1 + 1); return buf; }
-    static char buf[8]; snprintf(buf, sizeof(buf), "0x%02X", vk); return buf;
-  }
-  }
-}
+
 
 // ============================================================================
 // WndProc hook
 // ============================================================================
 static LRESULT CALLBACK hWndProc(HWND hWnd, UINT msg, WPARAM wParam,
                                  LPARAM lParam) {
-  // Key binding capture — intercept any key/mouse press while waiting
-  if (hooks::waitingForAimbotKey) {
+  // Generic key binding capture — any UI element can request a bind
+  if (hooks::pendingKeyBind) {
     if ((msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) && wParam != VK_INSERT) {
-      hooks::aimbotKey = (int)wParam;
-      hooks::waitingForAimbotKey = false;
+      *hooks::pendingKeyBind = (int)wParam;
+      if (hooks::pendingKeyBindFlag) *hooks::pendingKeyBindFlag = false;
+      hooks::pendingKeyBind = nullptr;
+      hooks::pendingKeyBindFlag = nullptr;
       return 0;
     }
     if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN ||
@@ -105,13 +77,16 @@ static LRESULT CALLBACK hWndProc(HWND hWnd, UINT msg, WPARAM wParam,
       else if (msg == WM_RBUTTONDOWN) btn = VK_RBUTTON;
       else if (msg == WM_MBUTTONDOWN) btn = VK_MBUTTON;
       else if (msg == WM_XBUTTONDOWN) btn = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? VK_XBUTTON1 : VK_XBUTTON2;
-      hooks::aimbotKey = btn;
-      hooks::waitingForAimbotKey = false;
+      *hooks::pendingKeyBind = btn;
+      if (hooks::pendingKeyBindFlag) *hooks::pendingKeyBindFlag = false;
+      hooks::pendingKeyBind = nullptr;
+      hooks::pendingKeyBindFlag = nullptr;
       return 0;
     }
   }
 
-  if (msg == WM_KEYDOWN && wParam == VK_INSERT) {
+  // Menu toggle key (default INSERT, customizable)
+  if (msg == WM_KEYDOWN && (int)wParam == hooks::menuKeyBind) {
     hooks::showMenu = !hooks::showMenu;
     return 0;
   }
@@ -174,17 +149,7 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
     ImGui::StyleColorsDark();
-
-    ImGuiStyle &style = ImGui::GetStyle();
-    style.WindowRounding = 6.0f;
-    style.FrameRounding = 4.0f;
-    style.GrabRounding = 4.0f;
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.12f, 0.94f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.08f, 0.16f, 1.00f);
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.16f, 0.16f, 0.32f, 1.00f);
-    style.Colors[ImGuiCol_FrameBg] = ImVec4(0.12f, 0.12f, 0.24f, 0.54f);
-    style.Colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    menu::ApplyStyle();
 
     ImGui_ImplWin32_Init(gameWindow);
     ImGui_ImplDX11_Init(pDevice, pContext);
@@ -244,65 +209,70 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
   ImGui::NewFrame();
 
   // ---- Menu ----
-  if (hooks::showMenu) {
-    ImGui::SetNextWindowSize(ImVec2(340, 500), ImGuiCond_FirstUseEver);
-    ImGui::Begin("CS2 Overlay", &hooks::showMenu, ImGuiWindowFlags_NoCollapse);
+  menu::Render();
 
-    // == Combat ==
-    ImGui::TextColored(ImVec4(0.98f, 0.4f, 0.4f, 1.0f), "Combat");
-    ImGui::Separator();
-    ImGui::Checkbox("Deathmatch Mode (Target Team)", &hooks::ignoreTeam);
-    {
-      char aimbotLabel[64];
-      snprintf(aimbotLabel, sizeof(aimbotLabel), "Aimbot [%s]", GetVKKeyName(hooks::aimbotKey));
-      ImGui::Checkbox(aimbotLabel, &hooks::aimbotEnabled);
-    }
-    if (hooks::aimbotEnabled) {
-      ImGui::SliderFloat("Smoothing", &hooks::aimbotSmoothing, 1.0f, 20.0f);
-      ImGui::SliderFloat("FOV", &hooks::aimbotFov, 1.0f, 90.0f);
-      ImGui::Checkbox("Visibility Check", &hooks::aimbotVisCheck);
-      if (hooks::waitingForAimbotKey) {
-        ImGui::Button("Press any key...");
-      } else {
-        if (ImGui::Button("Bind Key")) {
-          hooks::waitingForAimbotKey = true;
+  // ---- FOV Circle (drawn on background, behind everything else) ----
+  if (hooks::aimbotShowFov && hooks::aimbotEnabled) {
+    __try {
+      ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+      float screenW = displaySize.x;
+      float screenH = displaySize.y;
+      float centerX = screenW * 0.5f;
+      float centerY = screenH * 0.5f;
+
+      // Convert FOV degrees to screen pixel radius
+      // Simplified: radius = (fovDeg / 90) * (screenW / 2)
+      float radius = (hooks::aimbotFov / 90.0f) * (screenW * 0.5f);
+
+      ImDrawList *bgDraw = ImGui::GetBackgroundDrawList();
+
+      // Default circle at screen center
+      ImU32 fovColor = ImGui::ColorConvertFloat4ToU32(
+          ImVec4(hooks::aimbotFovColor[0], hooks::aimbotFovColor[1],
+                 hooks::aimbotFovColor[2], hooks::aimbotFovColor[3]));
+
+      bgDraw->AddCircle(ImVec2(centerX, centerY), radius, fovColor, 64, 1.5f);
+
+      // Recoil-follow circle: offset center by current punch angle
+      if (hooks::aimbotFovFollowRecoil) {
+        uintptr_t clientBase = (uintptr_t)GetModuleHandleA("client.dll");
+        if (clientBase) {
+          uintptr_t localPawn =
+              *(uintptr_t *)(clientBase + offsets::dwLocalPlayerPawn);
+          if (localPawn) {
+            uintptr_t aimPunchServices = *(uintptr_t *)(localPawn +
+                schemas::C_CSPlayerPawn::m_pAimPunchServices);
+            if (aimPunchServices) {
+              uintptr_t cacheData =
+                  *(uintptr_t *)(aimPunchServices + 0x70);
+              int cacheSize =
+                  *(int *)(aimPunchServices + 0x70 + 0x08);
+
+              if (cacheSize > 0 && cacheSize <= 0xFFFF && cacheData) {
+                Vector3 punch = *(Vector3 *)(cacheData +
+                    (cacheSize - 1) * sizeof(Vector3));
+
+                // Scale by 2 (Source 2 visual deviation = punch * 2)
+                // Convert punch angles to pixel offset
+                // pitch (up/down) -> Y offset, yaw (left/right) -> X offset
+                float punchPixX = -(punch.y * 2.0f / 90.0f) * (screenW * 0.5f);
+                float punchPixY = (punch.x * 2.0f / 90.0f) * (screenH * 0.5f);
+
+                ImU32 followColor = ImGui::ColorConvertFloat4ToU32(
+                    ImVec4(hooks::aimbotFovFollowColor[0],
+                           hooks::aimbotFovFollowColor[1],
+                           hooks::aimbotFovFollowColor[2],
+                           hooks::aimbotFovFollowColor[3]));
+
+                bgDraw->AddCircle(
+                    ImVec2(centerX + punchPixX, centerY + punchPixY),
+                    radius, followColor, 64, 1.5f);
+              }
+            }
+          }
         }
       }
-    }
-    ImGui::Checkbox("Triggerbot", &hooks::triggerbotEnabled);
-    if (hooks::triggerbotEnabled) {
-      ImGui::SliderInt("Delay (ms)", &hooks::triggerbotDelay, 0, 200);
-    }
-    ImGui::Checkbox("RCS (Recoil Control)", &hooks::rcsEnabled);
-    ImGui::Spacing();
-
-    // == Visuals ==
-    ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.98f, 1.0f), "Visuals");
-    ImGui::Separator();
-    ImGui::Checkbox("ESP", &hooks::espEnabled);
-    if (hooks::espEnabled) {
-      ImGui::Combo("ESP Style", &hooks::espStyle, "2D Boxes\0" "3D Glow (Silhouettes)\0");
-    }
-    ImGui::Checkbox("Radar Hack", &hooks::radarEnabled);
-    ImGui::Checkbox("Bomb Timer", &hooks::bombTimerEnabled);
-
-
-
-    ImGui::Spacing();
-
-    // == Config ==
-    ImGui::TextColored(ImVec4(0.6f, 0.98f, 0.6f, 1.0f), "Config");
-    ImGui::Separator();
-    if (ImGui::Button("Save Config"))
-      config::Save();
-    ImGui::SameLine();
-    if (ImGui::Button("Load Config"))
-      config::Load();
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::TextDisabled("[INSERT] toggle menu | [END] eject");
-    ImGui::End();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
   }
 
   // ---- Features (SEH protected — game memory may be invalid during map load)

@@ -53,8 +53,8 @@ void rcs::Run() {
   // gun the player is holding (AK-47, M4, etc.).
   Vector3 viewAngles = *(Vector3 *)(clientBase + offsets::dwViewAngles);
 
-  viewAngles.x -= dx;
-  viewAngles.y -= dy;
+  viewAngles.x -= dx * (hooks::rcsY / 100.0f);  // Y = vertical
+  viewAngles.y -= dy * (hooks::rcsX / 100.0f);  // X = horizontal
   viewAngles = ClampAngles(viewAngles);
 
   *(Vector3 *)(clientBase + offsets::dwViewAngles) = viewAngles;

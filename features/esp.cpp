@@ -100,7 +100,7 @@ void esp::Render() {
       uintptr_t glowProperty = pawn + schemas::C_BaseModelEntity::m_Glow;
       bool *bGlowing = (bool *)(glowProperty + schemas::CGlowProperty::m_bGlowing);
 
-      if (hooks::espStyle == 1) {
+      if (hooks::espStyle == 2) {
         int *iGlowType = (int *)(glowProperty + schemas::CGlowProperty::m_iGlowType);
         Color *glowColorOverride =
             (Color *)(glowProperty + schemas::CGlowProperty::m_glowColorOverride);
@@ -143,7 +143,7 @@ void esp::Render() {
       float boxWidth = boxHeight * 0.45f;
       float boxLeft = screenHead.x - boxWidth * 0.5f;
 
-      if (hooks::espStyle == 0) {
+      if (hooks::espStyle == 0 || hooks::espStyle == 1) {
         ImU32 boxColor;
         if (isTeammate) {
           boxColor = IM_COL32(50, 205, 50, 255);
@@ -155,9 +155,29 @@ void esp::Render() {
                                  : IM_COL32(255, 99, 71, 120);
         }
 
-        drawList->AddRect(ImVec2(boxLeft, screenHead.y),
-                          ImVec2(boxLeft + boxWidth, screenFoot.y), boxColor, 0.f,
-                          0, 2.0f);
+        if (hooks::espStyle == 0) {
+          // Full 2D Box
+          drawList->AddRect(ImVec2(boxLeft, screenHead.y),
+                            ImVec2(boxLeft + boxWidth, screenFoot.y), boxColor, 0.f,
+                            0, 2.0f);
+        } else {
+          // Cornered Box (only draw corner lines)
+          float cornerLen = boxHeight * 0.2f;
+          float cx1 = boxLeft, cy1 = screenHead.y;
+          float cx2 = boxLeft + boxWidth, cy2 = screenFoot.y;
+          // Top-left
+          drawList->AddLine(ImVec2(cx1, cy1), ImVec2(cx1 + cornerLen, cy1), boxColor, 2.0f);
+          drawList->AddLine(ImVec2(cx1, cy1), ImVec2(cx1, cy1 + cornerLen), boxColor, 2.0f);
+          // Top-right
+          drawList->AddLine(ImVec2(cx2, cy1), ImVec2(cx2 - cornerLen, cy1), boxColor, 2.0f);
+          drawList->AddLine(ImVec2(cx2, cy1), ImVec2(cx2, cy1 + cornerLen), boxColor, 2.0f);
+          // Bottom-left
+          drawList->AddLine(ImVec2(cx1, cy2), ImVec2(cx1 + cornerLen, cy2), boxColor, 2.0f);
+          drawList->AddLine(ImVec2(cx1, cy2), ImVec2(cx1, cy2 - cornerLen), boxColor, 2.0f);
+          // Bottom-right
+          drawList->AddLine(ImVec2(cx2, cy2), ImVec2(cx2 - cornerLen, cy2), boxColor, 2.0f);
+          drawList->AddLine(ImVec2(cx2, cy2), ImVec2(cx2, cy2 - cornerLen), boxColor, 2.0f);
+        }
       }
 
       // Health bar

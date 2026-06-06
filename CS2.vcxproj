@@ -200,6 +200,7 @@
     <ClCompile Include="features\bombtimer.cpp" />
 
     <ClCompile Include="features\config.cpp" />
+    <ClCompile Include="features\menu.cpp" />
   </ItemGroup>
 
   <!-- ================================================================== -->

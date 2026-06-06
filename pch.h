@@ -37,6 +37,7 @@
 #include "features/bombtimer.h"
 #include "features/config.h"
 #include "features/esp.h"
+#include "features/menu.h"
 #include "features/rcs.h"
 #include "features/triggerbot.h"
 #include "hooks/present.h"
