@@ -301,11 +301,14 @@ void grenadehelper::Render() {
              hooks::grenadeColor[3]));
 
   int heldType = DetectHeldGrenadeType(localPawn, entityList);
-  const GrenadeSpot *bestSpot = nullptr;
-  float bestDistance = FLT_MAX;
-
+  
   struct DrawnText { ImVec2 pos; };
   std::vector<DrawnText> drawnTexts;
+
+  const GrenadeSpot *bestAimSpot = nullptr;
+  float bestFov = FLT_MAX;
+  float minPhysicalDist = FLT_MAX;
+  Vector3 currentAngles = *(Vector3 *)(clientBase + offsets::dwViewAngles);
 
   for (const GrenadeSpot &spot : g_spots) {
     if (!FilterMatches(spot.type))
@@ -314,60 +317,117 @@ void grenadehelper::Render() {
       continue;
 
     float dist = (spot.origin - localOrigin).Length();
-    if (dist > hooks::grenadeDistance)
+    if (dist > 3500.0f) // Show from far away instead of hooks::grenadeDistance
       continue;
+
+    if (dist < minPhysicalDist) 
+      minPhysicalDist = dist;
+
+    bool isActive = (dist <= 60.0f);
 
     Vector3 screen;
-    if (!WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x,
-                       displaySize.y, screen)) {
-      continue;
-    }
+    bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);
 
-    draw->AddCircleFilled(ImVec2(screen.x, screen.y), 4.0f, IM_COL32(0, 0, 0, 150));
-    draw->AddCircle(ImVec2(screen.x, screen.y), 4.0f, color, 12, 2.0f);
+    if (isActive) {
+      if (onScreen) {
+        draw->AddCircle(ImVec2(screen.x, screen.y), 25.0f, color, 32, 2.0f);
+      }
 
-    ImVec2 textPos(screen.x, screen.y - 20.0f);
-    bool collision = true;
-    while (collision) {
-      collision = false;
-      for (const auto& dt : drawnTexts) {
-        if (std::abs(dt.pos.x - textPos.x) < 100.0f && std::abs(dt.pos.y - textPos.y) < 22.0f) {
-          textPos.y -= 22.0f;
-          collision = true;
-          break;
+      Vector3 aimDir = AngleToDirection(spot.angles.x, spot.angles.y);
+      Vector3 aimPoint = spot.origin + Vector3(0, 0, 64.0f) + aimDir * 800.0f;
+      Vector3 aimScreen;
+      
+      if (WorldToScreen(aimPoint, viewMatrix, displaySize.x, displaySize.y, aimScreen)) {
+        draw->AddCircle(ImVec2(aimScreen.x, aimScreen.y), 10.0f, color, 16, 2.0f);
+        draw->AddLine(ImVec2(aimScreen.x - 18.0f, aimScreen.y), ImVec2(aimScreen.x - 5.0f, aimScreen.y), color, 2.0f);
+        draw->AddLine(ImVec2(aimScreen.x + 5.0f, aimScreen.y), ImVec2(aimScreen.x + 18.0f, aimScreen.y), color, 2.0f);
+        draw->AddLine(ImVec2(aimScreen.x, aimScreen.y - 18.0f), ImVec2(aimScreen.x, aimScreen.y - 5.0f), color, 2.0f);
+        draw->AddLine(ImVec2(aimScreen.x, aimScreen.y + 5.0f), ImVec2(aimScreen.x, aimScreen.y + 18.0f), color, 2.0f);
+
+        char instruction[64] = "Left Click Throw";
+        char displayName[128];
+        strncpy_s(displayName, sizeof(displayName), spot.name, _TRUNCATE);
+        
+        char* jt = strstr(displayName, "(JT)");
+        if (jt) {
+            *jt = '\0';
+            strcpy_s(instruction, sizeof(instruction), "Jump Throw");
+        }
+        for (int i = (int)strlen(displayName) - 1; i >= 0 && displayName[i] == ' '; i--) {
+            displayName[i] = '\0';
+        }
+
+        char label[256];
+        snprintf(label, sizeof(label), "%s\n%s", displayName, instruction);
+        ImVec2 size = ImGui::CalcTextSize(label);
+        ImVec2 textPos(aimScreen.x, aimScreen.y - 40.0f); // Higher above crosshair
+
+        bool collision = true;
+        while (collision) {
+          collision = false;
+          for (const auto& dt : drawnTexts) {
+            if (std::abs(dt.pos.x - textPos.x) < size.x + 10.0f && std::abs(dt.pos.y - textPos.y) < size.y + 10.0f) {
+              textPos.y -= (size.y + 10.0f);
+              collision = true;
+              break;
+            }
+          }
+        }
+        drawnTexts.push_back({textPos});
+
+        ImVec2 bgMin(textPos.x - size.x * 0.5f - 6.0f, textPos.y - size.y * 0.5f - 4.0f);
+        ImVec2 bgMax(textPos.x + size.x * 0.5f + 6.0f, textPos.y + size.y * 0.5f + 4.0f);
+        draw->AddRectFilled(bgMin, bgMax, IM_COL32(0, 0, 0, 200), 6.0f);
+        draw->AddText(ImVec2(textPos.x - size.x * 0.5f, textPos.y - size.y * 0.5f), color, label);
+      }
+
+      Vector3 delta;
+      delta.x = NormalizePitch(spot.angles.x - currentAngles.x);
+      delta.y = NormalizeYaw(spot.angles.y - currentAngles.y);
+      float fov = std::sqrt(delta.x*delta.x + delta.y*delta.y);
+      if (fov < bestFov) {
+        bestFov = fov;
+        bestAimSpot = &spot;
+      }
+
+    } else {
+      if (!onScreen) continue;
+
+      draw->AddCircleFilled(ImVec2(screen.x, screen.y), 4.0f, IM_COL32(0, 0, 0, 150));
+      draw->AddCircle(ImVec2(screen.x, screen.y), 4.0f, color, 12, 2.0f);
+
+      char displayName[128];
+      strncpy_s(displayName, sizeof(displayName), spot.name, _TRUNCATE);
+      char* jt = strstr(displayName, "(JT)");
+      if (jt) *jt = '\0';
+      for (int i = (int)strlen(displayName) - 1; i >= 0 && displayName[i] == ' '; i--) {
+          displayName[i] = '\0';
+      }
+
+      char label[128];
+      snprintf(label, sizeof(label), "%s [%.0fm]", displayName, dist * 0.0254f);
+      ImVec2 size = ImGui::CalcTextSize(label);
+      ImVec2 textPos(screen.x, screen.y - 20.0f);
+
+      bool collision = true;
+      while (collision) {
+        collision = false;
+        for (const auto& dt : drawnTexts) {
+          if (std::abs(dt.pos.x - textPos.x) < size.x + 10.0f && std::abs(dt.pos.y - textPos.y) < size.y + 10.0f) {
+            textPos.y -= (size.y + 10.0f);
+            collision = true;
+            break;
+          }
         }
       }
-    }
-    drawnTexts.push_back({textPos});
+      drawnTexts.push_back({textPos});
 
-    char label[128];
-    snprintf(label, sizeof(label), "%s [%s] %.0fm", spot.name, TypeName(spot.type), dist * 0.0254f);
-    ImVec2 size = ImGui::CalcTextSize(label);
-
-    ImVec2 bgMin(textPos.x - size.x * 0.5f - 4.0f, textPos.y - size.y * 0.5f - 2.0f);
-    ImVec2 bgMax(textPos.x + size.x * 0.5f + 4.0f, textPos.y + size.y * 0.5f + 2.0f);
-    draw->AddRectFilled(bgMin, bgMax, IM_COL32(0, 0, 0, 180), 4.0f);
-
-    draw->AddText(ImVec2(textPos.x - size.x * 0.5f, textPos.y - size.y * 0.5f), color, label);
-
-    if (dist < bestDistance) {
-      bestDistance = dist;
-      bestSpot = &spot;
+      ImVec2 bgMin(textPos.x - size.x * 0.5f - 4.0f, textPos.y - size.y * 0.5f - 2.0f);
+      ImVec2 bgMax(textPos.x + size.x * 0.5f + 4.0f, textPos.y + size.y * 0.5f + 2.0f);
+      draw->AddRectFilled(bgMin, bgMax, IM_COL32(0, 0, 0, 180), 4.0f);
+      draw->AddText(ImVec2(textPos.x - size.x * 0.5f, textPos.y - size.y * 0.5f), color, label);
     }
   }
 
-  if (bestSpot && bestDistance <= 60.0f) {
-    Vector3 aimDir = AngleToDirection(bestSpot->angles.x, bestSpot->angles.y);
-    Vector3 aimPoint = bestSpot->origin + Vector3(0, 0, 64.0f) + aimDir * 800.0f;
-    Vector3 aimScreen;
-    if (WorldToScreen(aimPoint, viewMatrix, displaySize.x, displaySize.y, aimScreen)) {
-       draw->AddCircle(ImVec2(aimScreen.x, aimScreen.y), 6.0f, color, 12, 2.0f);
-       draw->AddLine(ImVec2(aimScreen.x - 10.0f, aimScreen.y), ImVec2(aimScreen.x - 4.0f, aimScreen.y), color, 2.0f);
-       draw->AddLine(ImVec2(aimScreen.x + 4.0f, aimScreen.y), ImVec2(aimScreen.x + 10.0f, aimScreen.y), color, 2.0f);
-       draw->AddLine(ImVec2(aimScreen.x, aimScreen.y - 10.0f), ImVec2(aimScreen.x, aimScreen.y - 4.0f), color, 2.0f);
-       draw->AddLine(ImVec2(aimScreen.x, aimScreen.y + 4.0f), ImVec2(aimScreen.x, aimScreen.y + 10.0f), color, 2.0f);
-    }
-  }
-
-  ApplyAimAssist(clientBase, bestSpot, bestDistance);
+  ApplyAimAssist(clientBase, bestAimSpot, minPhysicalDist);
 }
