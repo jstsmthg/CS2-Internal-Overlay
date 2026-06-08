@@ -19,5 +19,7 @@ output/
 # Executables
 *.exe
 
+graphify-out/
+
 # Explicitly track cs2-dumper.exe
 !cs2-dumper.exe

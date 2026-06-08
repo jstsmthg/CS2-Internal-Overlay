@@ -231,6 +231,12 @@ static bool FilterMatches(int spotType) {
   return hooks::grenadeFilter == 0 || hooks::grenadeFilter == spotType;
 }
 
+static Vector3 AngleToDirection(float pitch, float yaw) {
+  float p = pitch * (3.14159265f / 180.0f);
+  float y = yaw * (3.14159265f / 180.0f);
+  return { cosf(p) * cosf(y), cosf(p) * sinf(y), -sinf(p) };
+}
+
 static void ApplyAimAssist(uintptr_t clientBase, const GrenadeSpot *bestSpot,
                            float distance) {
   if (!hooks::grenadeAimAssist || !bestSpot || distance > 85.0f || hooks::showMenu)
@@ -298,6 +304,9 @@ void grenadehelper::Render() {
   const GrenadeSpot *bestSpot = nullptr;
   float bestDistance = FLT_MAX;
 
+  struct DrawnText { ImVec2 pos; };
+  std::vector<DrawnText> drawnTexts;
+
   for (const GrenadeSpot &spot : g_spots) {
     if (!FilterMatches(spot.type))
       continue;
@@ -314,16 +323,49 @@ void grenadehelper::Render() {
       continue;
     }
 
-    draw->AddCircle(ImVec2(screen.x, screen.y), 12.0f, color, 20, 2.0f);
+    draw->AddCircleFilled(ImVec2(screen.x, screen.y), 4.0f, IM_COL32(0, 0, 0, 150));
+    draw->AddCircle(ImVec2(screen.x, screen.y), 4.0f, color, 12, 2.0f);
+
+    ImVec2 textPos(screen.x, screen.y - 20.0f);
+    bool collision = true;
+    while (collision) {
+      collision = false;
+      for (const auto& dt : drawnTexts) {
+        if (std::abs(dt.pos.x - textPos.x) < 100.0f && std::abs(dt.pos.y - textPos.y) < 22.0f) {
+          textPos.y -= 22.0f;
+          collision = true;
+          break;
+        }
+      }
+    }
+    drawnTexts.push_back({textPos});
+
     char label[128];
-    snprintf(label, sizeof(label), "%s [%s] %.0fm", spot.name, TypeName(spot.type),
-             dist * 0.0254f);
+    snprintf(label, sizeof(label), "%s [%s] %.0fm", spot.name, TypeName(spot.type), dist * 0.0254f);
     ImVec2 size = ImGui::CalcTextSize(label);
-    draw->AddText(ImVec2(screen.x - size.x * 0.5f, screen.y - 22.0f), color, label);
+
+    ImVec2 bgMin(textPos.x - size.x * 0.5f - 4.0f, textPos.y - size.y * 0.5f - 2.0f);
+    ImVec2 bgMax(textPos.x + size.x * 0.5f + 4.0f, textPos.y + size.y * 0.5f + 2.0f);
+    draw->AddRectFilled(bgMin, bgMax, IM_COL32(0, 0, 0, 180), 4.0f);
+
+    draw->AddText(ImVec2(textPos.x - size.x * 0.5f, textPos.y - size.y * 0.5f), color, label);
 
     if (dist < bestDistance) {
       bestDistance = dist;
       bestSpot = &spot;
+    }
+  }
+
+  if (bestSpot && bestDistance <= 60.0f) {
+    Vector3 aimDir = AngleToDirection(bestSpot->angles.x, bestSpot->angles.y);
+    Vector3 aimPoint = bestSpot->origin + Vector3(0, 0, 64.0f) + aimDir * 800.0f;
+    Vector3 aimScreen;
+    if (WorldToScreen(aimPoint, viewMatrix, displaySize.x, displaySize.y, aimScreen)) {
+       draw->AddCircle(ImVec2(aimScreen.x, aimScreen.y), 6.0f, color, 12, 2.0f);
+       draw->AddLine(ImVec2(aimScreen.x - 10.0f, aimScreen.y), ImVec2(aimScreen.x - 4.0f, aimScreen.y), color, 2.0f);
+       draw->AddLine(ImVec2(aimScreen.x + 4.0f, aimScreen.y), ImVec2(aimScreen.x + 10.0f, aimScreen.y), color, 2.0f);
+       draw->AddLine(ImVec2(aimScreen.x, aimScreen.y - 10.0f), ImVec2(aimScreen.x, aimScreen.y - 4.0f), color, 2.0f);
+       draw->AddLine(ImVec2(aimScreen.x, aimScreen.y + 4.0f), ImVec2(aimScreen.x, aimScreen.y + 10.0f), color, 2.0f);
     }
   }
 
