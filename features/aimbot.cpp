@@ -9,18 +9,90 @@ static auto s_lastFrame = std::chrono::steady_clock::now();
 // ============================================================================
 static int HitboxToBone(int hitbox) {
   switch (hitbox) {
-  case 0: return 6;  // Head
+  case 0: return 7;  // Head
   case 1: return 5;  // Neck
   case 2: return 4;  // Chest (Spine2)
   case 3: return 0;  // Pelvis (Root)
   case 4: return 23; // Legs (left calf, center mass)
-  default: return 6; // Fallback to head
+  default: return 7; // Fallback to head
   }
 }
 
 // All bones to check for closest-hitbox mode
-static const int g_allBones[] = { 6, 5, 4, 0, 23 };
+static const int g_allBones[] = { 7, 5, 4, 0, 23 };
 static const int g_allBonesCount = 5;
+
+static bool IsZeroVector(const Vector3 &v) {
+  return v.x == 0.0f && v.y == 0.0f && v.z == 0.0f;
+}
+
+static Vector3 AdjustHitboxPoint(int hitbox, const Vector3 &point,
+                                 const Vector3 &headPoint,
+                                 const Vector3 &neckPoint) {
+  Vector3 adjusted = point;
+  switch (hitbox) {
+  case 0:
+    // Bone 7 is the exact head center, no Z offset needed.
+    break;
+  case 1:
+    if (!IsZeroVector(headPoint) && !IsZeroVector(neckPoint))
+      adjusted = neckPoint + (headPoint - neckPoint) * 0.35f;
+    break;
+  case 2:
+    adjusted.z += 1.5f;
+    break;
+  default:
+    break;
+  }
+  return adjusted;
+}
+
+static Vector3 GetConfiguredHitboxPosition(uintptr_t boneArray, int hitbox,
+                                           const Vector3 &enemyOrigin) {
+  Vector3 headPoint = {};
+  Vector3 neckPoint = {};
+  if (boneArray) {
+    headPoint = GetBonePosition(boneArray, 6);
+    neckPoint = GetBonePosition(boneArray, 5);
+  }
+
+  Vector3 basePos;
+  if (boneArray) {
+    basePos = GetBonePosition(boneArray, HitboxToBone(hitbox));
+  } else {
+    float height = 68.f;
+    switch (hitbox) {
+    case 0: height = 68.f; break;
+    case 1: height = 62.f; break;
+    case 2: height = 48.f; break;
+    case 3: height = 0.f;  break;
+    case 4: height = 20.f; break;
+    }
+    basePos = enemyOrigin + Vector3(0.f, 0.f, height);
+    if (hitbox == 0)
+      basePos.z += 4.5f;
+  }
+
+  return AdjustHitboxPoint(hitbox, basePos, headPoint, neckPoint);
+}
+
+static Vector3 PredictTargetPosition(const Vector3 &basePos,
+                                     const Vector3 &enemyVel, float dt) {
+  // The previous dt*3 lead was over-predicting lateral strafes and pulling the
+  // aim noticeably off to the side. Keep prediction modest and horizontal-only.
+  float speed2D = enemyVel.Length2D();
+  if (speed2D < 75.0f)
+    return basePos;
+
+  float predTime = dt * 1.25f;
+  if (predTime > 0.020f)
+    predTime = 0.020f;
+  if (predTime < 0.0f)
+    predTime = 0.0f;
+
+  Vector3 horizVel(enemyVel.x, enemyVel.y, 0.0f);
+  return basePos + horizVel * predTime;
+}
 
 // ============================================================================
 // Weapon Category Detection
@@ -165,8 +237,8 @@ void aimbot::Run() {
   Vector3 localOrigin =
       *(Vector3 *)(localSceneNode + schemas::CGameSceneNode::m_vecAbsOrigin);
 
-  // Read the proper view offset (0xE70 = CNetworkViewOffsetVector, first 12
-  // bytes are the xyz vector)
+  // Local eye position using actual m_vecViewOffset (handles crouching)
+  // Read the full view offset, as using only Z or adding padding caused twitching or vertical offset.
   Vector3 viewOffset = *(Vector3 *)(localPawn + schemas::C_BaseModelEntity::m_vecViewOffset);
   Vector3 eyePos = localOrigin + viewOffset;
 
@@ -265,7 +337,6 @@ void aimbot::Run() {
 
     // --- Velocity-based prediction data ---
     Vector3 enemyVel = *(Vector3 *)(pawn + schemas::C_BaseEntity::m_vecAbsVelocity);
-    float predTime = dt * 3.0f; // compensate for interp + render delay
 
     if (hooks::aimbotClosestHitbox) {
       // --- Closest hitbox mode: check all bones, pick smallest angular distance ---
@@ -274,17 +345,16 @@ void aimbot::Run() {
         Vector3 bonePos;
 
         if (boneArray) {
-          bonePos = GetBonePosition(boneArray, boneIdx);
+          bonePos = GetConfiguredHitboxPosition(boneArray, bi, enemyOrigin);
         } else {
-          // Fallback: approximate positions relative to origin
-          float heights[] = { 68.f, 62.f, 48.f, 0.f, 20.f };
+          float heights[] = { 72.5f, 62.f, 49.5f, 0.f, 20.f };
           bonePos = enemyOrigin + Vector3(0.f, 0.f, heights[bi]);
         }
 
         if (bonePos.x == 0.f && bonePos.y == 0.f && bonePos.z == 0.f)
           continue;
 
-        Vector3 predictedPos = bonePos + enemyVel * predTime;
+        Vector3 predictedPos = PredictTargetPosition(bonePos, enemyVel, dt);
         Vector3 targetAngle = CalcAngle(eyePos, predictedPos);
 
         float dPitch = NormalizePitch(targetAngle.x - currentAngles.x);
@@ -299,28 +369,13 @@ void aimbot::Run() {
       }
     } else {
       // --- Single hitbox mode: use selected bone ---
-      int targetBone = HitboxToBone(hooks::aimbotHitbox);
-      Vector3 targetPos;
-
-      if (boneArray) {
-        targetPos = GetBonePosition(boneArray, targetBone);
-      } else {
-        // Fallback height estimates per bone
-        float height = 68.f;
-        switch (hooks::aimbotHitbox) {
-        case 0: height = 68.f; break; // Head
-        case 1: height = 62.f; break; // Neck
-        case 2: height = 48.f; break; // Chest
-        case 3: height = 0.f;  break; // Pelvis
-        case 4: height = 20.f; break; // Legs
-        }
-        targetPos = enemyOrigin + Vector3(0.f, 0.f, height);
-      }
+      Vector3 targetPos =
+          GetConfiguredHitboxPosition(boneArray, hooks::aimbotHitbox, enemyOrigin);
 
       if (targetPos.x == 0.f && targetPos.y == 0.f && targetPos.z == 0.f)
         continue;
 
-      Vector3 predictedPos = targetPos + enemyVel * predTime;
+      Vector3 predictedPos = PredictTargetPosition(targetPos, enemyVel, dt);
       Vector3 targetAngle = CalcAngle(eyePos, predictedPos);
 
       float dPitch = NormalizePitch(targetAngle.x - currentAngles.x);

@@ -37,9 +37,13 @@
 #include "features/bombtimer.h"
 #include "features/config.h"
 #include "features/esp.h"
+#include "features/grenadehelper.h"
 #include "features/menu.h"
+#include "features/misc.h"
+#include "features/radar.h"
 #include "features/rcs.h"
 #include "features/triggerbot.h"
+#include "features/worldesp.h"
 #include "hooks/present.h"
 
 

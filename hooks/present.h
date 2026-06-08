@@ -36,10 +36,6 @@ inline bool aimbotVisCheck = true;
 inline int aimbotHitbox = 0; // 0=head,1=neck,2=chest,3=pelvis,4=legs
 inline bool aimbotClosestHitbox = false;
 inline bool aimbotLinearSmooth = false;
-inline bool aimbotShowFov = false;
-inline float aimbotFovColor[4] = {0.f, 0.83f, 1.f, 1.f};
-inline bool aimbotFovFollowRecoil = false;
-inline float aimbotFovFollowColor[4] = {1.f, 0.f, 0.f, 1.f};
 inline int aimbotWeaponCat = 0; // 0=All,1=Rifle,2=SMG,3=Pistol,4=Sniper,5=Shotgun
 
 // =========================================================================
@@ -123,13 +119,10 @@ inline bool spectatorListVerbose = false;
 inline bool hitmarkerEnabled = false;
 inline int hitmarkerSound = 0; // 0=none,1=cod,2=bell,3=minecraft
 inline float hitmarkerVolume = 50.0f;
-inline bool watermarkEnabled = true;
 inline int menuKeyBind = VK_INSERT;
 inline bool waitingForMenuKey = false;
 inline bool recoilCrosshair = false;
 inline bool snaptapEnabled = false;
-inline int maxFps = 0;    // 0 = uncapped
-inline bool vsyncEnabled = false;
 
 // =========================================================================
 // Grenade Helper

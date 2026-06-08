@@ -35,10 +35,7 @@ void config::Save() {
   WriteKey(f, "aimbotHitbox", hooks::aimbotHitbox);
   WriteKey(f, "aimbotClosestHitbox", hooks::aimbotClosestHitbox);
   WriteKey(f, "aimbotLinearSmooth", hooks::aimbotLinearSmooth);
-  WriteKey(f, "aimbotShowFov", hooks::aimbotShowFov);
-  WriteColor(f, "aimbotFovColor", hooks::aimbotFovColor);
-  WriteKey(f, "aimbotFovFollowRecoil", hooks::aimbotFovFollowRecoil);
-  WriteColor(f, "aimbotFovFollowColor", hooks::aimbotFovFollowColor);
+
   WriteKey(f, "aimbotWeaponCat", hooks::aimbotWeaponCat);
 
   // RCS
@@ -108,12 +105,11 @@ void config::Save() {
   WriteKey(f, "hitmarkerEnabled", hooks::hitmarkerEnabled);
   WriteKey(f, "hitmarkerSound", hooks::hitmarkerSound);
   WriteKey(f, "hitmarkerVolume", hooks::hitmarkerVolume);
-  WriteKey(f, "watermarkEnabled", hooks::watermarkEnabled);
+
   WriteKey(f, "menuKeyBind", hooks::menuKeyBind);
   WriteKey(f, "recoilCrosshair", hooks::recoilCrosshair);
   WriteKey(f, "snaptapEnabled", hooks::snaptapEnabled);
-  WriteKey(f, "maxFps", hooks::maxFps);
-  WriteKey(f, "vsyncEnabled", hooks::vsyncEnabled);
+
 
   // Grenade Helper
   WriteKey(f, "grenadeHelperEnabled", hooks::grenadeHelperEnabled);
@@ -193,10 +189,7 @@ void config::Load() {
     ParseLine(line, "aimbotHitbox", hooks::aimbotHitbox);
     ParseLine(line, "aimbotClosestHitbox", hooks::aimbotClosestHitbox);
     ParseLine(line, "aimbotLinearSmooth", hooks::aimbotLinearSmooth);
-    ParseLine(line, "aimbotShowFov", hooks::aimbotShowFov);
-    ParseColor(line, "aimbotFovColor", hooks::aimbotFovColor);
-    ParseLine(line, "aimbotFovFollowRecoil", hooks::aimbotFovFollowRecoil);
-    ParseColor(line, "aimbotFovFollowColor", hooks::aimbotFovFollowColor);
+
     ParseLine(line, "aimbotWeaponCat", hooks::aimbotWeaponCat);
 
     // RCS
@@ -266,12 +259,11 @@ void config::Load() {
     ParseLine(line, "hitmarkerEnabled", hooks::hitmarkerEnabled);
     ParseLine(line, "hitmarkerSound", hooks::hitmarkerSound);
     ParseLine(line, "hitmarkerVolume", hooks::hitmarkerVolume);
-    ParseLine(line, "watermarkEnabled", hooks::watermarkEnabled);
+
     ParseLine(line, "menuKeyBind", hooks::menuKeyBind);
     ParseLine(line, "recoilCrosshair", hooks::recoilCrosshair);
     ParseLine(line, "snaptapEnabled", hooks::snaptapEnabled);
-    ParseLine(line, "maxFps", hooks::maxFps);
-    ParseLine(line, "vsyncEnabled", hooks::vsyncEnabled);
+
 
     // Grenade Helper
     ParseLine(line, "grenadeHelperEnabled", hooks::grenadeHelperEnabled);

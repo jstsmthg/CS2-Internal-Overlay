@@ -173,12 +173,16 @@
     <ClInclude Include="sdk\structs.h" />
     <ClInclude Include="hooks\present.h" />
     <ClInclude Include="features\esp.h" />
+    <ClInclude Include="features\grenadehelper.h" />
     <ClInclude Include="features\aimbot.h" />
     <ClInclude Include="features\triggerbot.h" />
     <ClInclude Include="features\rcs.h" />
     <ClInclude Include="features\bombtimer.h" />
 
     <ClInclude Include="features\config.h" />
+    <ClInclude Include="features\misc.h" />
+    <ClInclude Include="features\radar.h" />
+    <ClInclude Include="features\worldesp.h" />
   </ItemGroup>
 
   <!-- ================================================================== -->
@@ -194,6 +198,7 @@
     </ClCompile>
     <ClCompile Include="hooks\present.cpp" />
     <ClCompile Include="features\esp.cpp" />
+    <ClCompile Include="features\grenadehelper.cpp" />
     <ClCompile Include="features\aimbot.cpp" />
     <ClCompile Include="features\triggerbot.cpp" />
     <ClCompile Include="features\rcs.cpp" />
@@ -201,6 +206,9 @@
 
     <ClCompile Include="features\config.cpp" />
     <ClCompile Include="features\menu.cpp" />
+    <ClCompile Include="features\misc.cpp" />
+    <ClCompile Include="features\radar.cpp" />
+    <ClCompile Include="features\worldesp.cpp" />
   </ItemGroup>
 
   <!-- ================================================================== -->

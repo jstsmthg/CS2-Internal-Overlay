@@ -115,6 +115,7 @@ static LRESULT CALLBACK hWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 // ============================================================================
 static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
                                   UINT Flags) {
+
   // ---- Device change detection ----
   // If the game recreates its device (map change), our pointers go stale.
   // Detect this by querying the current device and comparing.
@@ -179,6 +180,7 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
   // ---- Begin ImGui frame ----
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
+  misc::OnFrame(gameWindow);
 
   // Override ImGui DisplaySize and MousePos to handle Stretched Aspect Ratios correctly
   DXGI_SWAP_CHAIN_DESC sd;
@@ -208,78 +210,23 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
 
   ImGui::NewFrame();
 
+  // ---- Per-frame hotkeys ----
+  esp::OnFrame();
+
   // ---- Menu ----
   menu::Render();
-
-  // ---- FOV Circle (drawn on background, behind everything else) ----
-  if (hooks::aimbotShowFov && hooks::aimbotEnabled) {
-    __try {
-      ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-      float screenW = displaySize.x;
-      float screenH = displaySize.y;
-      float centerX = screenW * 0.5f;
-      float centerY = screenH * 0.5f;
-
-      // Convert FOV degrees to screen pixel radius
-      // Simplified: radius = (fovDeg / 90) * (screenW / 2)
-      float radius = (hooks::aimbotFov / 90.0f) * (screenW * 0.5f);
-
-      ImDrawList *bgDraw = ImGui::GetBackgroundDrawList();
-
-      // Default circle at screen center
-      ImU32 fovColor = ImGui::ColorConvertFloat4ToU32(
-          ImVec4(hooks::aimbotFovColor[0], hooks::aimbotFovColor[1],
-                 hooks::aimbotFovColor[2], hooks::aimbotFovColor[3]));
-
-      bgDraw->AddCircle(ImVec2(centerX, centerY), radius, fovColor, 64, 1.5f);
-
-      // Recoil-follow circle: offset center by current punch angle
-      if (hooks::aimbotFovFollowRecoil) {
-        uintptr_t clientBase = (uintptr_t)GetModuleHandleA("client.dll");
-        if (clientBase) {
-          uintptr_t localPawn =
-              *(uintptr_t *)(clientBase + offsets::dwLocalPlayerPawn);
-          if (localPawn) {
-            uintptr_t aimPunchServices = *(uintptr_t *)(localPawn +
-                schemas::C_CSPlayerPawn::m_pAimPunchServices);
-            if (aimPunchServices) {
-              uintptr_t cacheData =
-                  *(uintptr_t *)(aimPunchServices + 0x70);
-              int cacheSize =
-                  *(int *)(aimPunchServices + 0x70 + 0x08);
-
-              if (cacheSize > 0 && cacheSize <= 0xFFFF && cacheData) {
-                Vector3 punch = *(Vector3 *)(cacheData +
-                    (cacheSize - 1) * sizeof(Vector3));
-
-                // Scale by 2 (Source 2 visual deviation = punch * 2)
-                // Convert punch angles to pixel offset
-                // pitch (up/down) -> Y offset, yaw (left/right) -> X offset
-                float punchPixX = -(punch.y * 2.0f / 90.0f) * (screenW * 0.5f);
-                float punchPixY = (punch.x * 2.0f / 90.0f) * (screenH * 0.5f);
-
-                ImU32 followColor = ImGui::ColorConvertFloat4ToU32(
-                    ImVec4(hooks::aimbotFovFollowColor[0],
-                           hooks::aimbotFovFollowColor[1],
-                           hooks::aimbotFovFollowColor[2],
-                           hooks::aimbotFovFollowColor[3]));
-
-                bgDraw->AddCircle(
-                    ImVec2(centerX + punchPixX, centerY + punchPixY),
-                    radius, followColor, 64, 1.5f);
-              }
-            }
-          }
-        }
-      }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {}
-  }
 
   // ---- Features (SEH protected — game memory may be invalid during map load)
   // ----
   if (hooks::espEnabled) {
     __try {
       esp::Render();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+  }
+
+  if (hooks::radarEnabled || hooks::radarForceHud) {
+    __try {
+      radar::Render();
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
   }
   
@@ -306,6 +253,23 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
       bombtimer::Render();
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
   }
+
+  if (hooks::bombLocation || hooks::droppedItemsEnabled || hooks::droppedWeaponsEnabled ||
+      hooks::droppedGrenadesEnabled || hooks::molotovFireEnabled) {
+    __try {
+      worldesp::Render();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+  }
+
+  if (hooks::grenadeHelperEnabled) {
+    __try {
+      grenadehelper::Render();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+  }
+
+  __try {
+    misc::Render();
+  } __except (EXCEPTION_EXECUTE_HANDLER) {}
   
 
 

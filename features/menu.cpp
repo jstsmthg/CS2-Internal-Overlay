@@ -346,17 +346,7 @@ static void RenderAimbotTab() {
                         "%.1f");
     Toggle("Linear Smoothing", &hooks::aimbotLinearSmooth);
 
-    ImGui::Spacing();
-    Toggle("Show FOV Circle", &hooks::aimbotShowFov);
-    if (hooks::aimbotShowFov) {
-      ImGui::SameLine();
-      ColorEdit("fovCol", hooks::aimbotFovColor);
-    }
-    Toggle("FOV Follow Recoil", &hooks::aimbotFovFollowRecoil);
-    if (hooks::aimbotFovFollowRecoil) {
-      ImGui::SameLine();
-      ColorEdit("fovRCol", hooks::aimbotFovFollowColor);
-    }
+
   }
 
   ImGui::Spacing();
@@ -471,9 +461,9 @@ static void RenderVisualsTab() {
 
   ImGui::Spacing();
   SectionHeader("Radar");
-  Toggle("Force Radar", &hooks::radarEnabled);
-  if (hooks::radarEnabled) {
-    Toggle("Force HUD Position", &hooks::radarForceHud);
+  Toggle("Enable Radar Overlay", &hooks::radarEnabled);
+  Toggle("Force HUD Radar", &hooks::radarForceHud);
+  if (hooks::radarEnabled || hooks::radarForceHud) {
     Toggle("Outlines", &hooks::radarOutlines);
     Toggle("Player Dot", &hooks::radarPlayerDot);
     if (hooks::radarPlayerDot) {
@@ -563,13 +553,9 @@ static void RenderMiscTab() {
   SectionHeader("General");
   Toggle("Deathmatch Mode", &hooks::ignoreTeam);
   Toggle("Streamproof", &hooks::streamproof);
-  Toggle("Watermark", &hooks::watermarkEnabled);
-  Toggle("vSync", &hooks::vsyncEnabled);
 
-  if (hooks::maxFps == 0) {
-    ImGui::Text("Max FPS: Unlimited");
-  }
-  ImGui::SliderInt("Max FPS", &hooks::maxFps, 0, 500, "%d");
+
+
 
   if (hooks::customGameFov > 0.1f) {
     ImGui::SliderFloat("Game FOV", &hooks::customGameFov, 60.0f, 130.0f,
@@ -617,13 +603,14 @@ static void RenderGrenadeHelperTab() {
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    ImGui::TextColored(kTextDim,
-                        "Grenade spots will be loaded from external data.");
+    ImGui::TextColored(kTextDim, "Map: %s", grenadehelper::CurrentMapName());
+    ImGui::TextColored(kTextDim, "Loaded spots: %d", grenadehelper::LoadedSpotCount());
+    ImGui::TextColored(kTextDim, "Data file: grenades\\<map>.csv");
     ImGui::TextColored(kTextDim, "Stand in position and aim to save new spots.");
 
     ImGui::Spacing();
     if (ImGui::Button("Save Current Position", ImVec2(-1, 30))) {
-      // Phase 6: implement save logic
+      grenadehelper::RequestSaveCurrentSpot();
     }
   }
 

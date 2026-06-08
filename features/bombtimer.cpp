@@ -1,12 +1,78 @@
 #include "pch.h"
 
+namespace {
+
+static float ReadTickBaseFallback(uintptr_t clientBase) {
+  uintptr_t localController =
+      *(uintptr_t *)(clientBase + offsets::dwLocalPlayerController);
+  if (!localController)
+    return 0.0f;
+
+  uint32_t tickBase =
+      *(uint32_t *)(localController + schemas::CBasePlayerController::m_nTickBase);
+  if (tickBase == 0 || tickBase > 1000000)
+    return 0.0f;
+
+  return (float)tickBase * (1.0f / 64.0f);
+}
+
+} // namespace
+
+static float ReadCurTimeImpl(uintptr_t clientBase) {
+  uintptr_t globalVarsCandidates[2] = {
+      *(uintptr_t *)(clientBase + offsets::dwGlobalVars),
+      clientBase + offsets::dwGlobalVars,
+  };
+  const std::ptrdiff_t curTimeOffsets[] = {0x2C, 0x30, 0x34, 0x38};
+
+  for (uintptr_t base : globalVarsCandidates) {
+    if (!base || base < 0x10000)
+      continue;
+    for (std::ptrdiff_t off : curTimeOffsets) {
+      float curTime = *(float *)(base + off);
+      if (curTime > 0.0f && curTime < 100000.0f)
+        return curTime;
+    }
+  }
+  return 0.0f;
+}
+
+float bombtimer::ReadCurTime() {
+  uintptr_t clientBase = (uintptr_t)GetModuleHandleA("client.dll");
+  if (!clientBase)
+    return 0.0f;
+  float curTime = ReadCurTimeImpl(clientBase);
+  if (curTime > 0.0f)
+    return curTime;
+  return ReadTickBaseFallback(clientBase);
+}
+
+uintptr_t bombtimer::FindPlantedC4Entity() {
+  uintptr_t clientBase = (uintptr_t)GetModuleHandleA("client.dll");
+  if (!clientBase)
+    return 0;
+
+  uintptr_t c4Node = *(uintptr_t *)(clientBase + offsets::dwPlantedC4);
+  if (!c4Node)
+    return 0;
+    
+  // dwPlantedC4 usually points to a pointer or the entity directly
+  uintptr_t entity = *(uintptr_t*)c4Node;
+  if (!entity) entity = c4Node;
+
+  bool ticking = *(bool *)(entity + schemas::C_PlantedC4::m_bBombTicking);
+  if (ticking)
+    return entity;
+
+  return 0;
+}
+
 void bombtimer::Render() {
   uintptr_t clientBase = (uintptr_t)GetModuleHandleA("client.dll");
   if (!clientBase)
     return;
 
-  // The C4 planted entity pointer
-  uintptr_t c4Entity = *(uintptr_t *)(clientBase + offsets::dwPlantedC4);
+  uintptr_t c4Entity = FindPlantedC4Entity();
   if (!c4Entity)
     return;
 
@@ -20,25 +86,22 @@ void bombtimer::Render() {
   if (blowTime <= 0.f)
     return;
 
-  // Current game time from GlobalVars
-  // dwGlobalVars is a pointer TO a pointer in CS2
-  uintptr_t globalVarsPtr = *(uintptr_t *)(clientBase + offsets::dwGlobalVars);
-  if (!globalVarsPtr)
+  float curTime = ReadCurTime();
+  if (curTime <= 0.0f)
     return;
-
-  // Read curtime (offset 0x34 is standard for recent CS2 GlobalVars)
-  float curTime = *(float *)(globalVarsPtr + 0x34);
-
-  // If curTime is somehow 0, try offset 0x2C
-  if (curTime <= 0.f) {
-    curTime = *(float *)(globalVarsPtr + 0x2C);
-  }
 
   float remaining = blowTime - curTime;
 
   // Validate remaining time (bomb timer is typically 40s)
   if (remaining <= 0.f || remaining > 45.f)
     return;
+
+  bool beingDefused =
+      *(bool *)(c4Entity + schemas::C_PlantedC4::m_bBeingDefused);
+  float defuseEndTime =
+      *(float *)(c4Entity + schemas::C_PlantedC4::m_flDefuseCountDown);
+  float defuseRemaining = beingDefused ? (defuseEndTime - curTime) : 0.0f;
+  int bombSite = *(int *)(c4Entity + schemas::C_PlantedC4::m_nBombSite);
 
   // Draw
   ImDrawList *drawList = ImGui::GetBackgroundDrawList();
@@ -52,7 +115,7 @@ void bombtimer::Render() {
   else if (remaining < 10.f)
     timerColor = IM_COL32(255, 165, 0, 255); // Orange
 
-  float barWidth = 200.f, barHeight = 20.f;
+  float barWidth = 260.f, barHeight = 20.f;
   float barLeft = centerX - barWidth * 0.5f;
   float barFrac = remaining / 40.0f;
   if (barFrac > 1.f)
@@ -72,9 +135,80 @@ void bombtimer::Render() {
       timerColor, 3.f);
 
   // Text overlay
-  char text[64];
-  snprintf(text, sizeof(text), "BOMB: %.1fs", remaining);
+  char text[96];
+  snprintf(text, sizeof(text), "BOMB %c: %.1fs",
+           bombSite == 1 ? 'B' : 'A', remaining);
   ImVec2 textSize = ImGui::CalcTextSize(text);
   drawList->AddText(ImVec2(centerX - textSize.x * 0.5f, yPos + 2.f),
                     IM_COL32(255, 255, 255, 255), text);
+
+  if (beingDefused && defuseRemaining > 0.0f) {
+    float defuseFrac = defuseRemaining / 10.0f;
+    if (defuseFrac < 0.0f)
+      defuseFrac = 0.0f;
+    if (defuseFrac > 1.0f)
+      defuseFrac = 1.0f;
+
+    float defuseY = yPos + barHeight + 8.0f;
+    drawList->AddRectFilled(ImVec2(barLeft, defuseY),
+                            ImVec2(barLeft + barWidth, defuseY + barHeight),
+                            IM_COL32(0, 0, 0, 160), 4.f);
+
+    ImU32 defuseColor =
+        defuseRemaining <= remaining ? IM_COL32(0, 220, 120, 255)
+                                     : IM_COL32(255, 80, 80, 255);
+    drawList->AddRectFilled(
+        ImVec2(barLeft + 2.0f, defuseY + 2.0f),
+        ImVec2(barLeft + 2.0f + (barWidth - 4.0f) * defuseFrac,
+               defuseY + barHeight - 2.0f),
+        defuseColor, 3.0f);
+
+    char defuseText[96];
+    snprintf(defuseText, sizeof(defuseText), "DEFUSE: %.1fs %s", defuseRemaining,
+             defuseRemaining <= remaining ? "(safe)" : "(too late)");
+    ImVec2 defuseSize = ImGui::CalcTextSize(defuseText);
+    drawList->AddText(
+        ImVec2(centerX - defuseSize.x * 0.5f, defuseY + 2.0f),
+        IM_COL32(255, 255, 255, 255), defuseText);
+  }
+
+  if (hooks::bombDefuseCircle) {
+    uintptr_t sceneNode =
+        *(uintptr_t *)(c4Entity + schemas::C_BaseEntity::m_pGameSceneNode);
+    if (sceneNode) {
+      Vector3 origin =
+          *(Vector3 *)(sceneNode + schemas::CGameSceneNode::m_vecAbsOrigin);
+      view_matrix_t &viewMatrix =
+          *(view_matrix_t *)(clientBase + offsets::dwViewMatrix);
+      Vector3 screen;
+      if (WorldToScreen(origin, viewMatrix, displaySize.x, displaySize.y, screen)) {
+        float explodeArc = remaining / 40.0f;
+        if (explodeArc < 0.0f)
+          explodeArc = 0.0f;
+        if (explodeArc > 1.0f)
+          explodeArc = 1.0f;
+
+        drawList->AddCircle(ImVec2(screen.x, screen.y), 24.0f,
+                            IM_COL32(255, 120, 40, 160), 32, 2.0f);
+        drawList->PathArcTo(ImVec2(screen.x, screen.y), 20.0f, -3.14159f * 0.5f,
+                            -3.14159f * 0.5f + (6.28318f * explodeArc), 32);
+        drawList->PathStroke(timerColor, 0, 3.0f);
+
+        if (beingDefused && defuseRemaining > 0.0f) {
+          float defuseArc = defuseRemaining / 10.0f;
+          if (defuseArc < 0.0f)
+            defuseArc = 0.0f;
+          if (defuseArc > 1.0f)
+            defuseArc = 1.0f;
+
+          drawList->PathArcTo(ImVec2(screen.x, screen.y), 28.0f, -3.14159f * 0.5f,
+                              -3.14159f * 0.5f + (6.28318f * defuseArc), 32);
+          drawList->PathStroke(
+              defuseRemaining <= remaining ? IM_COL32(0, 220, 120, 220)
+                                           : IM_COL32(255, 80, 80, 220),
+              0, 3.0f);
+        }
+      }
+    }
+  }
 }
