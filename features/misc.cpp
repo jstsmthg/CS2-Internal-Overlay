@@ -283,10 +283,32 @@ static void RenderSpectatorList(uintptr_t clientBase) {
   if (!hooks::spectatorList)
     return;
 
-  uintptr_t localPawn = *(uintptr_t *)(clientBase + offsets::dwLocalPlayerPawn);
   uintptr_t entityList = *(uintptr_t *)(clientBase + offsets::dwEntityList);
-  if (!localPawn || !entityList)
+  if (!entityList)
     return;
+
+  // Find the pawn we are currently controlling/spectating
+  uintptr_t localPawn = *(uintptr_t *)(clientBase + offsets::dwLocalPlayerPawn);
+  if (!localPawn)
+    return;
+
+  // If we are spectating someone, find who we are watching
+  uintptr_t watchedPawn = localPawn;
+  __try {
+    uintptr_t localObsServices =
+        *(uintptr_t *)(localPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
+    if (localObsServices) {
+      uint8_t localMode =
+          *(uint8_t *)(localObsServices + schemas::CPlayer_ObserverServices::m_iObserverMode);
+      if (localMode >= 3 && localMode <= 6) {
+        uint32_t watchHandle =
+            *(uint32_t *)(localObsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
+        uintptr_t watchTarget = ResolveHandle(entityList, watchHandle);
+        if (watchTarget)
+          watchedPawn = watchTarget;
+      }
+    }
+  } __except (EXCEPTION_EXECUTE_HANDLER) {}
 
   ImGui::SetNextWindowBgAlpha(0.30f);
   ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
@@ -303,46 +325,61 @@ static void RenderSpectatorList(uintptr_t clientBase) {
   int count = 0;
 
   for (int i = 1; i <= 64; i++) {
-    uintptr_t controller = ResolveIndex(entityList, i);
-    if (!controller)
-      continue;
+    __try {
+      uintptr_t controller = ResolveIndex(entityList, i);
+      if (!controller)
+        continue;
 
-    uint32_t obsPawnHandle =
-        *(uint32_t *)(controller + schemas::CCSPlayerController::m_hObserverPawn);
-    uintptr_t obsPawn = ResolveHandle(entityList, obsPawnHandle);
+      // Skip alive players — they can't be spectating
+      bool isAlive = *(bool *)(controller + schemas::CCSPlayerController::m_bPawnIsAlive);
+      if (isAlive)
+        continue;
 
-    if (!obsPawn) {
-      // Fallback to normal pawn (e.g. they just died and are in deathcam)
-      uint32_t pawnHandle =
-          *(uint32_t *)(controller + schemas::CCSPlayerController::m_hPlayerPawn);
-      obsPawn = ResolveHandle(entityList, pawnHandle);
-    }
-    
-    if (!obsPawn || obsPawn == localPawn)
-      continue;
+      // Try the observer pawn first (this is the correct pawn for dead/spectating players)
+      uintptr_t obsPawn = 0;
+      uint32_t obsPawnHandle =
+          *(uint32_t *)(controller + schemas::CCSPlayerController::m_hObserverPawn);
+      obsPawn = ResolveHandle(entityList, obsPawnHandle);
 
-    uintptr_t obsServices =
-        *(uintptr_t *)(obsPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
-    if (!obsServices)
-      continue;
+      // If no observer pawn, try the player pawn (deathcam uses the player pawn)
+      if (!obsPawn) {
+        uint32_t pawnHandle =
+            *(uint32_t *)(controller + schemas::CCSPlayerController::m_hPlayerPawn);
+        obsPawn = ResolveHandle(entityList, pawnHandle);
+      }
 
-    uint32_t targetHandle =
-        *(uint32_t *)(obsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
-    uintptr_t target = ResolveHandle(entityList, targetHandle);
-    if (target != localPawn)
-      continue;
+      if (!obsPawn || obsPawn == watchedPawn)
+        continue;
 
-    uintptr_t namePtr =
-        *(uintptr_t *)(controller + schemas::CCSPlayerController::m_sSanitizedPlayerName);
-    const char *name = namePtr ? (const char *)namePtr : "unknown";
-    if (hooks::spectatorListVerbose) {
-      uint8_t mode =
+      uintptr_t obsServices =
+          *(uintptr_t *)(obsPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
+      if (!obsServices)
+        continue;
+
+      uint8_t obsMode =
           *(uint8_t *)(obsServices + schemas::CPlayer_ObserverServices::m_iObserverMode);
-      ImGui::Text("%s (%s)", name, ObserverModeName(mode));
-    } else {
-      ImGui::Text("%s", name);
+      // Mode 0 = none (not spectating), modes 1-6 are valid observer modes
+      if (obsMode == 0)
+        continue;
+
+      uint32_t targetHandle =
+          *(uint32_t *)(obsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
+      uintptr_t target = ResolveHandle(entityList, targetHandle);
+      if (target != watchedPawn)
+        continue;
+
+      uintptr_t namePtr =
+          *(uintptr_t *)(controller + schemas::CCSPlayerController::m_sSanitizedPlayerName);
+      const char *name = namePtr ? (const char *)namePtr : "unknown";
+      if (hooks::spectatorListVerbose) {
+        ImGui::Text("%s (%s)", name, ObserverModeName(obsMode));
+      } else {
+        ImGui::Text("%s", name);
+      }
+      count++;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+      continue;
     }
-    count++;
   }
 
   if (count == 0)

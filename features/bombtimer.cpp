@@ -52,19 +52,36 @@ uintptr_t bombtimer::FindPlantedC4Entity() {
   if (!clientBase)
     return 0;
 
-  uintptr_t c4Node = *(uintptr_t *)(clientBase + offsets::dwPlantedC4);
-  if (!c4Node)
-    return 0;
-    
-  // dwPlantedC4 usually points to a pointer or the entity directly
-  uintptr_t entity = *(uintptr_t*)c4Node;
-  if (!entity) entity = c4Node;
+  __try {
+    uintptr_t c4Node = *(uintptr_t *)(clientBase + offsets::dwPlantedC4);
+    if (!c4Node || c4Node < 0x10000)
+      return 0;
 
-  bool ticking = *(bool *)(entity + schemas::C_PlantedC4::m_bBombTicking);
-  if (ticking)
+    // dwPlantedC4 points to a pointer to the entity (or a list)
+    uintptr_t entity = *(uintptr_t *)c4Node;
+    if (!entity || entity < 0x10000)
+      return 0;
+
+    // Validate the entity by checking m_bBombTicking
+    bool ticking = *(bool *)(entity + schemas::C_PlantedC4::m_bBombTicking);
+    if (!ticking)
+      return 0;
+
+    // Extra validation: blow time must be reasonable
+    float blowTime = *(float *)(entity + schemas::C_PlantedC4::m_flC4Blow);
+    if (blowTime <= 0.0f || blowTime > 1000000.0f)
+      return 0;
+
+    // Check the scene node exists (proves it's a real entity)
+    uintptr_t sceneNode =
+        *(uintptr_t *)(entity + schemas::C_BaseEntity::m_pGameSceneNode);
+    if (!sceneNode || sceneNode < 0x10000)
+      return 0;
+
     return entity;
-
-  return 0;
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+    return 0;
+  }
 }
 
 void bombtimer::Render() {
