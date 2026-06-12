@@ -292,20 +292,52 @@ static void RenderSpectatorList(uintptr_t clientBase) {
   if (!localPawn)
     return;
 
-  // If we are spectating someone, find who we are watching
+  // Determine which pawn(s) we consider "the watched target"
+  // When alive: watchedPawn = our own player pawn
+  // When spectating: watchedPawn = the player pawn of whoever we're watching
   uintptr_t watchedPawn = localPawn;
+  uintptr_t localController = *(uintptr_t *)(clientBase + offsets::dwLocalPlayerController);
+
   __try {
-    uintptr_t localObsServices =
-        *(uintptr_t *)(localPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
-    if (localObsServices) {
-      uint8_t localMode =
-          *(uint8_t *)(localObsServices + schemas::CPlayer_ObserverServices::m_iObserverMode);
-      if (localMode >= 3 && localMode <= 6) {
-        uint32_t watchHandle =
-            *(uint32_t *)(localObsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
-        uintptr_t watchTarget = ResolveHandle(entityList, watchHandle);
-        if (watchTarget)
-          watchedPawn = watchTarget;
+    if (localController) {
+      bool localAlive = *(bool *)(localController + schemas::CCSPlayerController::m_bPawnIsAlive);
+      if (!localAlive) {
+        // We are dead — find who we're spectating via our observer pawn
+        uint32_t obsHandle =
+            *(uint32_t *)(localController + schemas::CCSPlayerController::m_hObserverPawn);
+        uintptr_t obsPawn = ResolveHandle(entityList, obsHandle);
+        if (obsPawn) {
+          uintptr_t obsServices =
+              *(uintptr_t *)(obsPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
+          if (obsServices) {
+            uint8_t mode =
+                *(uint8_t *)(obsServices + schemas::CPlayer_ObserverServices::m_iObserverMode);
+            if (mode >= 1 && mode <= 6) {
+              uint32_t targetHandle =
+                  *(uint32_t *)(obsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
+              uintptr_t target = ResolveHandle(entityList, targetHandle);
+              if (target)
+                watchedPawn = target;
+            }
+          }
+        }
+
+        // Also try from the player pawn's observer services as fallback
+        if (watchedPawn == localPawn) {
+          uintptr_t playerObsServices =
+              *(uintptr_t *)(localPawn + schemas::C_BasePlayerPawn::m_pObserverServices);
+          if (playerObsServices) {
+            uint8_t mode =
+                *(uint8_t *)(playerObsServices + schemas::CPlayer_ObserverServices::m_iObserverMode);
+            if (mode >= 1 && mode <= 6) {
+              uint32_t targetHandle =
+                  *(uint32_t *)(playerObsServices + schemas::CPlayer_ObserverServices::m_hObserverTarget);
+              uintptr_t target = ResolveHandle(entityList, targetHandle);
+              if (target)
+                watchedPawn = target;
+            }
+          }
+        }
       }
     }
   } __except (EXCEPTION_EXECUTE_HANDLER) {}
