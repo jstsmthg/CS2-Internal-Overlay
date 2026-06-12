@@ -317,13 +317,14 @@ void grenadehelper::Render() {
       continue;
 
     float dist = (spot.origin - localOrigin).Length();
-    if (dist > 3500.0f) // Show from far away instead of hooks::grenadeDistance
+    float distMeters = dist * 0.01905f; // Source 2: 1 unit ≈ 0.01905m (1 foot = 12 units)
+    if (dist > hooks::grenadeDistance)
       continue;
 
     if (dist < minPhysicalDist) 
       minPhysicalDist = dist;
 
-    bool isActive = (dist <= 60.0f);
+    bool isActive = (dist <= 150.0f); // ~3 meters activation radius
 
     Vector3 screen;
     bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);
@@ -405,7 +406,7 @@ void grenadehelper::Render() {
       }
 
       char label[128];
-      snprintf(label, sizeof(label), "%s [%.0fm]", displayName, dist * 0.0254f);
+      snprintf(label, sizeof(label), "%s [%.1fm]", displayName, distMeters);
       ImVec2 size = ImGui::CalcTextSize(label);
       ImVec2 textPos(screen.x, screen.y - 20.0f);
 
