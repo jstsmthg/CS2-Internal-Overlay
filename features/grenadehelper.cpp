@@ -317,14 +317,14 @@ void grenadehelper::Render() {
       continue;
 
     float dist = (spot.origin - localOrigin).Length();
-    float distMeters = dist * 0.01905f; // Source 2: 1 unit ≈ 0.01905m (1 foot = 12 units)
+    float distMeters = dist * 0.01905f; // Source 2: 1 unit ≈ 0.01905 meters
     if (dist > hooks::grenadeDistance)
       continue;
 
     if (dist < minPhysicalDist) 
       minPhysicalDist = dist;
 
-    bool isActive = (dist <= 150.0f); // ~3 meters activation radius
+    bool isActive = (dist <= 120.0f); // ~2.3 meters
 
     Vector3 screen;
     bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);
