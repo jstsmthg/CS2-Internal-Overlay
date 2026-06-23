@@ -118,6 +118,21 @@ void config::Save() {
   WriteColor(f, "grenadeColor", hooks::grenadeColor);
   WriteKey(f, "grenadeAimAssist", hooks::grenadeAimAssist);
 
+  // Transcript
+  WriteKey(f, "transcriptEnabled", hooks::transcriptEnabled);
+  WriteKey(f, "transcriptTargetLang", hooks::transcriptTargetLang);
+  WriteKey(f, "transcriptShowOriginal", hooks::transcriptShowOriginal);
+  WriteKey(f, "transcriptTranslateText", hooks::transcriptTranslateText);
+  WriteKey(f, "transcriptTranslateAscii", hooks::transcriptTranslateAscii);
+  WriteKey(f, "transcriptVoiceEnabled", hooks::transcriptVoiceEnabled);
+  WriteKey(f, "transcriptTranslateVoice", hooks::transcriptTranslateVoice);
+  WriteKey(f, "transcriptPanelX", hooks::transcriptPanelX);
+  WriteKey(f, "transcriptPanelY", hooks::transcriptPanelY);
+  WriteKey(f, "transcriptPanelW", hooks::transcriptPanelW);
+  WriteKey(f, "transcriptPanelH", hooks::transcriptPanelH);
+  WriteKey(f, "transcriptMaxMessages", hooks::transcriptMaxMessages);
+  WriteKey(f, "transcriptVoiceRmsThreshold", hooks::transcriptVoiceRmsThreshold);
+
   fclose(f);
 }
 
@@ -271,6 +286,22 @@ void config::Load() {
     ParseLine(line, "grenadeDistance", hooks::grenadeDistance);
     ParseColor(line, "grenadeColor", hooks::grenadeColor);
     ParseLine(line, "grenadeAimAssist", hooks::grenadeAimAssist);
+
+    // Transcript
+    ParseLine(line, "transcriptEnabled", hooks::transcriptEnabled);
+    ParseLine(line, "transcriptTargetLang", hooks::transcriptTargetLang);
+    ParseLine(line, "transcriptShowOriginal", hooks::transcriptShowOriginal);
+    ParseLine(line, "transcriptTranslateText", hooks::transcriptTranslateText);
+    ParseLine(line, "transcriptTranslateAscii", hooks::transcriptTranslateAscii);
+    ParseLine(line, "transcriptVoiceEnabled", hooks::transcriptVoiceEnabled);
+    ParseLine(line, "transcriptTranslateVoice", hooks::transcriptTranslateVoice);
+    ParseLine(line, "transcriptPanelX", hooks::transcriptPanelX);
+    ParseLine(line, "transcriptPanelY", hooks::transcriptPanelY);
+    ParseLine(line, "transcriptPanelW", hooks::transcriptPanelW);
+    ParseLine(line, "transcriptPanelH", hooks::transcriptPanelH);
+    ParseLine(line, "transcriptMaxMessages", hooks::transcriptMaxMessages);
+    ParseLine(line, "transcriptVoiceRmsThreshold",
+              hooks::transcriptVoiceRmsThreshold);
   }
 
   fclose(f);

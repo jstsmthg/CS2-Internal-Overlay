@@ -40,6 +40,8 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
   // Load saved config
   config::Load();
   Log("[*] Config loaded\n");
+  transcript::Init();
+  Log("[*] Transcript initialized\n");
 
   // Wait for the game to fully load
   Sleep(3000);
@@ -66,6 +68,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
   // Cleanup
   Log("[*] Unloading...\n");
 
+  transcript::Shutdown();
   hooks::Cleanup();
   Sleep(500);
 

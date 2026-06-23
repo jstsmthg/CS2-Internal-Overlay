@@ -30,6 +30,12 @@
     <Filter Include="Source Files\MinHook">
       <UniqueIdentifier>{A1B2C3D4-0007-0007-0007-000000000007}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Audio">
+      <UniqueIdentifier>{A1B2C3D4-0008-0008-0008-000000000008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Audio">
+      <UniqueIdentifier>{A1B2C3D4-0009-0009-0009-000000000009}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 
   <!-- Headers -->
@@ -58,6 +64,15 @@
     <ClInclude Include="features\triggerbot.h">
       <Filter>Header Files\Features</Filter>
     </ClInclude>
+    <ClInclude Include="features\transcript.h">
+      <Filter>Header Files\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_capture.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\whisper_engine.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
   </ItemGroup>
 
   <!-- Project Sources -->
@@ -79,6 +94,15 @@
     </ClCompile>
     <ClCompile Include="features\triggerbot.cpp">
       <Filter>Source Files\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\transcript.cpp">
+      <Filter>Source Files\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\audio_capture.cpp">
+      <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\whisper_engine.cpp">
+      <Filter>Source Files\Audio</Filter>
     </ClCompile>
   </ItemGroup>
 

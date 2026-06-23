@@ -21,5 +21,9 @@ output/
 
 graphify-out/
 
+# Large/runtime-local transcription dependencies
+dependencies/whisper/
+models/*.bin
+
 # Explicitly track cs2-dumper.exe
 !cs2-dumper.exe

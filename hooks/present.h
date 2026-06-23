@@ -133,4 +133,21 @@ inline float grenadeDistance = 500.0f;
 inline float grenadeColor[4] = {0.f, 1.f, 0.f, 1.f};
 inline bool grenadeAimAssist = false;
 
+// =========================================================================
+// Transcript (AI Translation)
+// =========================================================================
+inline bool transcriptEnabled = false;
+inline int transcriptTargetLang = 0; // 0=English, 1=Hindi, 2=Arabic, 3=Spanish, 4=Portuguese
+inline bool transcriptShowOriginal = true;
+inline bool transcriptTranslateText = true;
+inline bool transcriptTranslateAscii = false;
+inline bool transcriptVoiceEnabled = false;
+inline bool transcriptTranslateVoice = true;
+inline float transcriptPanelX = 28.0f;
+inline float transcriptPanelY = 340.0f;
+inline float transcriptPanelW = 520.0f;
+inline float transcriptPanelH = 220.0f;
+inline int transcriptMaxMessages = 10;
+inline float transcriptVoiceRmsThreshold = 0.015f;
+
 } // namespace hooks

@@ -89,7 +89,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;winhttp.lib;ole32.lib;avrt.lib;Mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
@@ -113,7 +113,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;winhttp.lib;ole32.lib;avrt.lib;Mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
@@ -135,7 +135,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;winhttp.lib;ole32.lib;avrt.lib;Mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
@@ -159,7 +159,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;winhttp.lib;ole32.lib;avrt.lib;Mmdevapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
@@ -182,7 +182,10 @@
     <ClInclude Include="features\config.h" />
     <ClInclude Include="features\misc.h" />
     <ClInclude Include="features\radar.h" />
+    <ClInclude Include="features\transcript.h" />
     <ClInclude Include="features\worldesp.h" />
+    <ClInclude Include="audio\audio_capture.h" />
+    <ClInclude Include="audio\whisper_engine.h" />
   </ItemGroup>
 
   <!-- ================================================================== -->
@@ -208,7 +211,10 @@
     <ClCompile Include="features\menu.cpp" />
     <ClCompile Include="features\misc.cpp" />
     <ClCompile Include="features\radar.cpp" />
+    <ClCompile Include="features\transcript.cpp" />
     <ClCompile Include="features\worldesp.cpp" />
+    <ClCompile Include="audio\audio_capture.cpp" />
+    <ClCompile Include="audio\whisper_engine.cpp" />
   </ItemGroup>
 
   <!-- ================================================================== -->

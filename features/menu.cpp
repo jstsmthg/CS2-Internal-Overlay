@@ -248,9 +248,9 @@ void menu::ApplyStyle() {
 // ============================================================================
 // Sidebar
 // ============================================================================
-static const char *kTabNames[] = {"Aimbot", "Visuals", "World ESP",
-                                   "Misc", "Grenades", "Config"};
-static const char *kTabIcons[] = {"+", "@", "#", "*", "%", "="};
+static const char *kTabNames[] = {"Aimbot", "Visuals", "World ESP", "Misc",
+                                  "Grenades", "Transcript", "Config"};
+static const char *kTabIcons[] = {"+", "@", "#", "*", "%", "~", "="};
 
 static void RenderSidebar() {
   ImGui::PushStyleColor(ImGuiCol_ChildBg,
@@ -618,6 +618,53 @@ static void RenderGrenadeHelperTab() {
 }
 
 // ============================================================================
+// Tab: Transcript
+// ============================================================================
+static void RenderTranscriptTab() {
+  float colW = (ImGui::GetContentRegionAvail().x - kPad) * 0.5f;
+
+  ImGui::BeginChild("##transcript_left", ImVec2(colW, -1), false);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
+
+  SectionHeader("Text Translation");
+  Toggle("Enable Transcript", &hooks::transcriptEnabled);
+  ImGui::Combo("Target Language", &hooks::transcriptTargetLang,
+               "English\0Hindi\0Arabic\0Spanish\0Portuguese\0");
+  Toggle("Translate Text Chat", &hooks::transcriptTranslateText);
+  Toggle("Translate ASCII Chat", &hooks::transcriptTranslateAscii);
+  Toggle("Show Original", &hooks::transcriptShowOriginal);
+
+  ImGui::Spacing();
+  ImGui::TextColored(kTextDim, "Status: %s", transcript::Status());
+
+  ImGui::PopStyleVar();
+  ImGui::EndChild();
+
+  ImGui::SameLine(0, kPad);
+
+  ImGui::BeginChild("##transcript_right", ImVec2(0, -1), false);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
+
+  SectionHeader("Voice");
+  Toggle("Voice Transcription", &hooks::transcriptVoiceEnabled);
+  Toggle("Translate Voice", &hooks::transcriptTranslateVoice);
+  ImGui::SliderFloat("Voice Gate", &hooks::transcriptVoiceRmsThreshold, 0.002f,
+                      0.080f, "%.3f");
+
+  ImGui::Spacing();
+  SectionHeader("Panel");
+  ImGui::SliderFloat("X", &hooks::transcriptPanelX, 0.0f, 2500.0f, "%.0f");
+  ImGui::SliderFloat("Y", &hooks::transcriptPanelY, 0.0f, 1400.0f, "%.0f");
+  ImGui::SliderFloat("Width", &hooks::transcriptPanelW, 260.0f, 900.0f, "%.0f");
+  ImGui::SliderFloat("Height", &hooks::transcriptPanelH, 120.0f, 500.0f,
+                      "%.0f");
+  ImGui::SliderInt("Max Lines", &hooks::transcriptMaxMessages, 3, 40);
+
+  ImGui::PopStyleVar();
+  ImGui::EndChild();
+}
+
+// ============================================================================
 // Tab: Config
 // ============================================================================
 static char configName[64] = "default";
@@ -688,6 +735,9 @@ void menu::Render() {
     break;
   case Tab_GrenadeHelper:
     RenderGrenadeHelperTab();
+    break;
+  case Tab_Transcript:
+    RenderTranscriptTab();
     break;
   case Tab_Config:
     RenderConfigTab();

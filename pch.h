@@ -12,12 +12,20 @@
 
 // Standard library
 #include <atomic>
+#include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <deque>
+#include <functional>
+#include <mutex>
+#include <string>
 #include <thread>
+#include <vector>
 
 
 // MinHook
@@ -42,6 +50,7 @@
 #include "features/misc.h"
 #include "features/radar.h"
 #include "features/rcs.h"
+#include "features/transcript.h"
 #include "features/triggerbot.h"
 #include "features/worldesp.h"
 #include "hooks/present.h"

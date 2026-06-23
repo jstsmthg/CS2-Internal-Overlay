@@ -310,21 +310,39 @@ void grenadehelper::Render() {
   float minPhysicalDist = FLT_MAX;
   Vector3 currentAngles = *(Vector3 *)(clientBase + offsets::dwViewAngles);
 
-  for (const GrenadeSpot &spot : g_spots) {
+  // ── Pass 1: find the single closest qualifying spot ──
+  int closestIdx = -1;
+  float closestDist = FLT_MAX;
+  for (int i = 0; i < (int)g_spots.size(); ++i) {
+    const GrenadeSpot &spot = g_spots[i];
+    if (!FilterMatches(spot.type))
+      continue;
+    if (heldType != 0 && spot.type != 0 && spot.type != heldType)
+      continue;
+    float dist = (spot.origin - localOrigin).Length();
+    if (dist <= 120.0f && dist < closestDist) {
+      closestDist = dist;
+      closestIdx = i;
+    }
+  }
+
+  // ── Pass 2: render all visible spots ──
+  for (int i = 0; i < (int)g_spots.size(); ++i) {
+    const GrenadeSpot &spot = g_spots[i];
     if (!FilterMatches(spot.type))
       continue;
     if (heldType != 0 && spot.type != 0 && spot.type != heldType)
       continue;
 
     float dist = (spot.origin - localOrigin).Length();
-    float distMeters = dist * 0.01905f; // Source 2: 1 unit ≈ 0.01905 meters
+    float distMeters = dist * 0.01905f;
     if (dist > hooks::grenadeDistance)
       continue;
 
     if (dist < minPhysicalDist) 
       minPhysicalDist = dist;
 
-    bool isActive = (dist <= 120.0f); // ~2.3 meters
+    bool isActive = (i == closestIdx); // Only the single closest spot is active
 
     Vector3 screen;
     bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);
@@ -354,14 +372,14 @@ void grenadehelper::Render() {
             *jt = '\0';
             strcpy_s(instruction, sizeof(instruction), "Jump Throw");
         }
-        for (int i = (int)strlen(displayName) - 1; i >= 0 && displayName[i] == ' '; i--) {
-            displayName[i] = '\0';
+        for (int k = (int)strlen(displayName) - 1; k >= 0 && displayName[k] == ' '; k--) {
+            displayName[k] = '\0';
         }
 
         char label[256];
         snprintf(label, sizeof(label), "%s\n%s", displayName, instruction);
         ImVec2 size = ImGui::CalcTextSize(label);
-        ImVec2 textPos(aimScreen.x, aimScreen.y - 40.0f); // Higher above crosshair
+        ImVec2 textPos(aimScreen.x, aimScreen.y - 40.0f);
 
         bool collision = true;
         while (collision) {
@@ -401,8 +419,8 @@ void grenadehelper::Render() {
       strncpy_s(displayName, sizeof(displayName), spot.name, _TRUNCATE);
       char* jt = strstr(displayName, "(JT)");
       if (jt) *jt = '\0';
-      for (int i = (int)strlen(displayName) - 1; i >= 0 && displayName[i] == ' '; i--) {
-          displayName[i] = '\0';
+      for (int k = (int)strlen(displayName) - 1; k >= 0 && displayName[k] == ' '; k--) {
+          displayName[k] = '\0';
       }
 
       char label[128];

@@ -181,6 +181,7 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
   ImGui_ImplDX11_NewFrame();
   ImGui_ImplWin32_NewFrame();
   misc::OnFrame(gameWindow);
+  transcript::OnFrame();
 
   // Override ImGui DisplaySize and MousePos to handle Stretched Aspect Ratios correctly
   DXGI_SWAP_CHAIN_DESC sd;
@@ -264,6 +265,12 @@ static HRESULT __stdcall hPresent(IDXGISwapChain *pSwapChain, UINT SyncInterval,
   if (hooks::grenadeHelperEnabled) {
     __try {
       grenadehelper::Render();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+  }
+
+  if (hooks::transcriptEnabled) {
+    __try {
+      transcript::Render();
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
   }
 

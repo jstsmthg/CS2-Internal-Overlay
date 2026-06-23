@@ -9,6 +9,7 @@ enum Tab {
   Tab_WorldESP,
   Tab_Misc,
   Tab_GrenadeHelper,
+  Tab_Transcript,
   Tab_Config,
   Tab_COUNT
 };
