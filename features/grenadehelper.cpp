@@ -139,10 +139,12 @@ static void LoadSpotsForCurrentMap() {
   char url[256];
   snprintf(url, sizeof(url), "https://raw.githubusercontent.com/jstsmthg/CS2-Internal-Overlay/master/grenades/%s.csv", mapName);
   
-  // Download synchronously. This is extremely fast for a 1KB text file and only runs once per map load.
-  HRESULT hr = URLDownloadToFileA(NULL, url, path, 0, NULL);
-  if (FAILED(hr)) {
-      // If download fails (no internet, or file doesn't exist on repo), we just fall back to the existing local file.
+  // Download synchronously only if the file doesn't exist locally
+  if (GetFileAttributesA(path) == INVALID_FILE_ATTRIBUTES) {
+      HRESULT hr = URLDownloadToFileA(NULL, url, path, 0, NULL);
+      if (FAILED(hr)) {
+          // If download fails, we just fall back
+      }
   }
 
   FILE *f = nullptr;
@@ -249,8 +251,8 @@ static void ApplyAimAssist(uintptr_t clientBase, const GrenadeSpot *bestSpot,
   delta.y = NormalizeYaw(target.y - current.y);
   delta.z = 0.0f;
 
-  current.x += delta.x * 0.18f;
-  current.y += delta.y * 0.18f;
+  current.x += delta.x * hooks::grenadeAimAssistStrength;
+  current.y += delta.y * hooks::grenadeAimAssistStrength;
   current = ClampAngles(current);
   *(Vector3 *)(clientBase + offsets::dwViewAngles) = current;
 }

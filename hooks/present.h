@@ -132,6 +132,7 @@ inline int grenadeFilter = 0;    // 0=all,1=smoke,2=flash,3=molly,4=HE
 inline float grenadeDistance = 500.0f;
 inline float grenadeColor[4] = {0.f, 1.f, 0.f, 1.f};
 inline bool grenadeAimAssist = false;
+inline float grenadeAimAssistStrength = 0.06f;
 
 // =========================================================================
 // Transcript (AI Translation)

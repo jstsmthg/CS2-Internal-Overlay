@@ -595,6 +595,10 @@ static void RenderGrenadeHelperTab() {
     ImGui::SliderFloat("Max Distance", &hooks::grenadeDistance, 100.0f,
                         2000.0f, "%.0f units");
     Toggle("Aim Assist", &hooks::grenadeAimAssist);
+    if (hooks::grenadeAimAssist) {
+      ImGui::SliderFloat("Assist Strength", &hooks::grenadeAimAssistStrength,
+                         0.01f, 0.25f, "%.2f");
+    }
 
     ImGui::Text("Marker Color");
     ImGui::SameLine();
