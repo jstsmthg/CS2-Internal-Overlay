@@ -595,9 +595,9 @@ void transcript::Render() {
   }
 
   ImGui::SetNextWindowPos(ImVec2(hooks::transcriptPanelX, hooks::transcriptPanelY),
-                          ImGuiCond_FirstUseEver);
+                          ImGuiCond_Appearing);
   ImGui::SetNextWindowSize(ImVec2(hooks::transcriptPanelW, hooks::transcriptPanelH),
-                           ImGuiCond_FirstUseEver);
+                           ImGuiCond_Appearing);
   ImGui::SetNextWindowBgAlpha(0.34f);
   ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse |
                            ImGuiWindowFlags_NoSavedSettings;
@@ -641,6 +641,14 @@ void transcript::Render() {
     }
     ImGui::EndChild();
   }
+
+  // Update config variables in case the user dragged/resized the window
+  ImVec2 currentPos = ImGui::GetWindowPos();
+  ImVec2 currentSize = ImGui::GetWindowSize();
+  hooks::transcriptPanelX = currentPos.x;
+  hooks::transcriptPanelY = currentPos.y;
+  hooks::transcriptPanelW = currentSize.x;
+  hooks::transcriptPanelH = currentSize.y;
 
   ImGui::End();
 }

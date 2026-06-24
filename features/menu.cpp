@@ -657,11 +657,14 @@ static void RenderTranscriptTab() {
 
   ImGui::Spacing();
   SectionHeader("Panel");
-  ImGui::SliderFloat("X", &hooks::transcriptPanelX, 0.0f, 2500.0f, "%.0f");
-  ImGui::SliderFloat("Y", &hooks::transcriptPanelY, 0.0f, 1400.0f, "%.0f");
-  ImGui::SliderFloat("Width", &hooks::transcriptPanelW, 260.0f, 900.0f, "%.0f");
-  ImGui::SliderFloat("Height", &hooks::transcriptPanelH, 120.0f, 500.0f,
-                      "%.0f");
+  if (ImGui::SliderFloat("X", &hooks::transcriptPanelX, 0.0f, 2500.0f, "%.0f"))
+    ImGui::SetWindowPos("AI Transcript", ImVec2(hooks::transcriptPanelX, hooks::transcriptPanelY));
+  if (ImGui::SliderFloat("Y", &hooks::transcriptPanelY, 0.0f, 1400.0f, "%.0f"))
+    ImGui::SetWindowPos("AI Transcript", ImVec2(hooks::transcriptPanelX, hooks::transcriptPanelY));
+  if (ImGui::SliderFloat("Width", &hooks::transcriptPanelW, 260.0f, 900.0f, "%.0f"))
+    ImGui::SetWindowSize("AI Transcript", ImVec2(hooks::transcriptPanelW, hooks::transcriptPanelH));
+  if (ImGui::SliderFloat("Height", &hooks::transcriptPanelH, 120.0f, 500.0f, "%.0f"))
+    ImGui::SetWindowSize("AI Transcript", ImVec2(hooks::transcriptPanelW, hooks::transcriptPanelH));
   ImGui::SliderInt("Max Lines", &hooks::transcriptMaxMessages, 3, 40);
 
   ImGui::PopStyleVar();
