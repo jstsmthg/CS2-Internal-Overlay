@@ -316,15 +316,14 @@ void grenadehelper::Render() {
   int closestIdx = -1;
   float closestDist = FLT_MAX;
   for (int i = 0; i < (int)g_spots.size(); ++i) {
-    const GrenadeSpot &spot = g_spots[i];
-    if (!FilterMatches(spot.type))
-      continue;
-    if (heldType != 0 && spot.type != 0 && spot.type != heldType)
-      continue;
-    float dist = (spot.origin - localOrigin).Length();
-    if (dist <= 120.0f && dist < closestDist) {
-      closestDist = dist;
-    }
+      const GrenadeSpot& spot = g_spots[i];
+      if (!FilterMatches(spot.type)) continue;
+      if (heldType != 0 && spot.type != 0 && spot.type != heldType) continue;
+      
+      float dist = (spot.origin - localOrigin).Length();
+      if (dist <= 120.0f && dist < closestDist) {
+          closestDist = dist;
+      }
   }
 
   // ── Pass 2: render all visible spots ──
@@ -344,14 +343,35 @@ void grenadehelper::Render() {
       minPhysicalDist = dist;
 
     // Activate ALL spots that share the exact same physical origin as the closest spot
-    bool isActive = (dist <= closestDist + 5.0f);
+    bool isActive = false;
+    if (closestDist != FLT_MAX) {
+      isActive = (dist <= closestDist + 5.0f);
+    }
 
     Vector3 screen;
     bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);
 
     if (isActive) {
       if (onScreen) {
-        draw->AddCircle(ImVec2(screen.x, screen.y), 25.0f, color, 32, 2.0f);
+        // Draw a noticeable dot on the ground instead of a massive empty ring
+        draw->AddCircleFilled(ImVec2(screen.x, screen.y), 12.0f, IM_COL32(0, 0, 0, 150));
+        draw->AddCircle(ImVec2(screen.x, screen.y), 12.0f, color, 24, 2.0f);
+        
+        // Render name tag above the dot
+        char displayName[128];
+        strncpy_s(displayName, sizeof(displayName), spot.name, _TRUNCATE);
+        char* jt = strstr(displayName, "(JT)");
+        if (jt) *jt = '\0';
+        for (int k = (int)strlen(displayName) - 1; k >= 0 && displayName[k] == ' '; k--) {
+            displayName[k] = '\0';
+        }
+        
+        ImVec2 size = ImGui::CalcTextSize(displayName);
+        ImVec2 textPos(screen.x, screen.y - 25.0f);
+        ImVec2 bgMin(textPos.x - size.x * 0.5f - 4.0f, textPos.y - size.y * 0.5f - 2.0f);
+        ImVec2 bgMax(textPos.x + size.x * 0.5f + 4.0f, textPos.y + size.y * 0.5f + 2.0f);
+        draw->AddRectFilled(bgMin, bgMax, IM_COL32(0, 0, 0, 180), 4.0f);
+        draw->AddText(ImVec2(textPos.x - size.x * 0.5f, textPos.y - size.y * 0.5f), color, displayName);
       }
 
       Vector3 aimDir = AngleToDirection(spot.angles.x, spot.angles.y);

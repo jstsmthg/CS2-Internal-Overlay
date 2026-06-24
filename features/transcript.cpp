@@ -168,26 +168,54 @@ static std::string JsonUnescape(std::string value) {
 }
 
 static std::string ExtractTranslatedText(const std::string &json) {
+  // Google Translate format: [[["Translated text","Original text",...],["segment 2"...]]]
+  const char *gKey = "[[[";
+  size_t start = json.find(gKey);
+  if (start != std::string::npos) {
+    std::string value;
+    size_t i = start + 2; // points to the first '[' of the inner array
+    while (i < json.size() && json[i] == '[') {
+      i++; // skip '['
+      if (i < json.size() && json[i] == '"') {
+        i++; // skip '"'
+        bool escape = false;
+        for (; i < json.size(); ++i) {
+          char c = json[i];
+          if (!escape && c == '"') break;
+          if (!escape && c == '\\') { escape = true; value.push_back(c); continue; }
+          escape = false;
+          value.push_back(c);
+        }
+      }
+      // advance to next segment if it exists
+      size_t nextSegment = json.find("],[", i);
+      size_t endOfArray = json.find("]]", i);
+      if (nextSegment != std::string::npos && (endOfArray == std::string::npos || nextSegment < endOfArray)) {
+        i = nextSegment + 2; // points to '[' of next segment
+      } else {
+        break;
+      }
+    }
+    return JsonUnescape(value);
+  }
+
+  // Fallback for mymemory format just in case
   const char *key = "\"translatedText\":\"";
   size_t pos = json.find(key);
-  if (pos == std::string::npos)
-    return {};
-  pos += strlen(key);
-  std::string value;
-  bool escape = false;
-  for (; pos < json.size(); ++pos) {
-    char c = json[pos];
-    if (!escape && c == '"')
-      break;
-    if (!escape && c == '\\') {
-      escape = true;
+  if (pos != std::string::npos) {
+    pos += strlen(key);
+    std::string value;
+    bool escape = false;
+    for (; pos < json.size(); ++pos) {
+      char c = json[pos];
+      if (!escape && c == '"') break;
+      if (!escape && c == '\\') { escape = true; value.push_back(c); continue; }
+      escape = false;
       value.push_back(c);
-      continue;
     }
-    escape = false;
-    value.push_back(c);
+    return JsonUnescape(value);
   }
-  return JsonUnescape(value);
+  return {};
 }
 
 static std::string TranslateText(const std::string &text,
@@ -202,9 +230,9 @@ static std::string TranslateText(const std::string &text,
   if (_stricmp(sourceLang.c_str(), targetLang) == 0)
     return {};
 
-  std::wstring path = L"/get?q=" + Utf8ToWide(UrlEncode(text)) +
-                      L"&langpair=" + Utf8ToWide(sourceLang) + L"|" +
-                      Utf8ToWide(targetLang);
+  std::wstring path = L"/translate_a/single?client=gtx&sl=" + Utf8ToWide(sourceLang) + 
+                      L"&tl=" + Utf8ToWide(targetLang) + 
+                      L"&dt=t&q=" + Utf8ToWide(UrlEncode(text));
 
   HINTERNET session =
       WinHttpOpen(L"CS2Overlay/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -213,7 +241,7 @@ static std::string TranslateText(const std::string &text,
     return {};
 
   HINTERNET connect =
-      WinHttpConnect(session, L"api.mymemory.translated.net",
+      WinHttpConnect(session, L"translate.googleapis.com",
                      INTERNET_DEFAULT_HTTPS_PORT, 0);
   if (!connect) {
     WinHttpCloseHandle(session);
