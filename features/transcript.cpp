@@ -324,20 +324,26 @@ static bool ParseChatLine(const std::string &line, std::string &author,
   author = Trim(line.substr(0, chatSep));
   message = Trim(line.substr(chatSep + 2));
 
-  // Strip optional team/all prefix: "[ALL] Player" or "[TEAM] Player" or " Player"
-  size_t bracket = author.rfind(']');
-  if (bracket != std::string::npos && bracket + 1 < author.size())
-    author = Trim(author.substr(bracket + 1));
+  // Extract known chat tags correctly
+  std::string tag = "";
+  if (author.find("[ALL] ") == 0) { tag = "[ALL] "; author = author.substr(6); }
+  else if (author.find("[T] ") == 0) { tag = "[T] "; author = author.substr(4); }
+  else if (author.find("[CT] ") == 0) { tag = "[CT] "; author = author.substr(5); }
+  else if (author.find("[Party] ") == 0) { tag = "[Party] "; author = author.substr(8); }
+  else if (author.find("[Spectator] ") == 0) { tag = "[Spectator] "; author = author.substr(12); }
+  
+  author = Trim(author);
 
-  if (author.empty() || message.empty())
-    return false;
+  if (author.empty()) return false;
+  
+  // If it still starts with '[', it's an engine subsystem like [Developer], [Networking]
+  if (author[0] == '[') return false;
 
   // Player names are at most 32 chars in CS2, be generous with 48
   if (author.size() > 48 || message.size() > 240)
     return false;
 
   // ── Reject known console output patterns ──
-  // Lines from engine/convars/subsystems that happen to contain " : "
   static const char *rejectPrefixes[] = {
       "ConVar",        "SteamNetworking", "Host_Error",   "ChangeGameUI",
       "CGameClient",   "CNetworkSystem",  "S2C_CHALLENGE", "Connected to",
@@ -359,7 +365,6 @@ static bool ParseChatLine(const std::string &line, std::string &author,
   }
 
   // Reject if the "author" contains characters that can't be in player names
-  // (engine subsystem names often contain :, =, (, ), /, \, etc.)
   for (char c : author) {
     if (c == '=' || c == '(' || c == ')' || c == '/' || c == '\\' ||
         c == '{' || c == '}' || c == ';' || c == '<' || c == '>')
@@ -614,6 +619,7 @@ void transcript::Render() {
   if (messages.empty()) {
     ImGui::TextDisabled("No translated chat yet");
   } else {
+    ImGui::BeginChild("TranscriptScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     for (const TranscriptMessage &msg : messages) {
       ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
       ImGui::TextColored(msg.voice ? ImVec4(0.40f, 0.85f, 1.0f, 1.0f)
@@ -630,6 +636,10 @@ void transcript::Render() {
       }
       ImGui::PopTextWrapPos();
     }
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+      ImGui::SetScrollHereY(1.0f);
+    }
+    ImGui::EndChild();
   }
 
   ImGui::End();

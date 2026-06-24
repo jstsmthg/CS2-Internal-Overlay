@@ -324,7 +324,6 @@ void grenadehelper::Render() {
     float dist = (spot.origin - localOrigin).Length();
     if (dist <= 120.0f && dist < closestDist) {
       closestDist = dist;
-      closestIdx = i;
     }
   }
 
@@ -344,7 +343,8 @@ void grenadehelper::Render() {
     if (dist < minPhysicalDist) 
       minPhysicalDist = dist;
 
-    bool isActive = (i == closestIdx); // Only the single closest spot is active
+    // Activate ALL spots that share the exact same physical origin as the closest spot
+    bool isActive = (dist <= closestDist + 5.0f);
 
     Vector3 screen;
     bool onScreen = WorldToScreen(spot.origin + Vector3(0, 0, 6.0f), viewMatrix, displaySize.x, displaySize.y, screen);

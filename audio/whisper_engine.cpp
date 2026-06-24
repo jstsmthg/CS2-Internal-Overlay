@@ -51,42 +51,48 @@ static bool FindWhisperFiles() {
   std::string dir = AppDataWhisperDir();
   if (dir.empty()) return false;
 
-  std::string cliPath = dir + "\\whisper-cli.exe";
+  std::string cliPath = dir + "\\main.exe";
   std::string modelPath = dir + "\\ggml-tiny.bin";
 
+  static bool g_downloading = false;
+
   if (!FileExists(cliPath.c_str()) || !FileExists(modelPath.c_str())) {
-    SetStatus("Downloading whisper dependencies (this may take a minute)...");
-    
-    std::string scriptPath = dir + "\\download.ps1";
-    FILE* f = nullptr;
-    fopen_s(&f, scriptPath.c_str(), "w");
-    if (f) {
-      fprintf(f, 
-        "$ProgressPreference = 'SilentlyContinue'\n"
-        "Invoke-WebRequest -Uri 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip' -OutFile 'whisper.zip'\n"
-        "Expand-Archive -Force 'whisper.zip' -DestinationPath .\n"
-        "Invoke-WebRequest -Uri 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin' -OutFile 'ggml-tiny.bin'\n"
-      );
-      fclose(f);
+    if (!g_downloading) {
+      g_downloading = true;
+      SetStatus("Downloading whisper dependencies (this may take a minute)...");
       
-      char cmd[MAX_PATH * 2];
-      snprintf(cmd, sizeof(cmd), "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%s\"", scriptPath.c_str());
-      
-      STARTUPINFOA si = { sizeof(si) };
-      PROCESS_INFORMATION pi = {};
-      si.dwFlags = STARTF_USESHOWWINDOW;
-      si.wShowWindow = SW_HIDE;
-      if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, dir.c_str(), &si, &pi)) {
-        WaitForSingleObject(pi.hProcess, 120000); // Wait up to 2 mins
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+      std::string scriptPath = dir + "\\download.ps1";
+      FILE* f = nullptr;
+      fopen_s(&f, scriptPath.c_str(), "w");
+      if (f) {
+        fprintf(f, 
+          "$ProgressPreference = 'SilentlyContinue'\n"
+          "Invoke-WebRequest -Uri 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip' -OutFile 'whisper.zip'\n"
+          "Expand-Archive -Force 'whisper.zip' -DestinationPath .\n"
+          "Invoke-WebRequest -Uri 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin' -OutFile 'ggml-tiny.bin'\n"
+        );
+        fclose(f);
+        
+        char cmd[MAX_PATH * 2];
+        snprintf(cmd, sizeof(cmd), "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%s\"", scriptPath.c_str());
+        
+        STARTUPINFOA si = { sizeof(si) };
+        PROCESS_INFORMATION pi = {};
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+        if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, dir.c_str(), &si, &pi)) {
+          CloseHandle(pi.hProcess);
+          CloseHandle(pi.hThread);
+        }
       }
     }
+    return false;
   }
 
   if (FileExists(cliPath.c_str()) && FileExists(modelPath.c_str())) {
     strncpy_s(g_cliPath, cliPath.c_str(), _TRUNCATE);
     strncpy_s(g_modelPath, modelPath.c_str(), _TRUNCATE);
+    g_downloading = false;
     return true;
   }
 
