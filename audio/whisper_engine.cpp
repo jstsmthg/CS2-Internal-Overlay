@@ -4,6 +4,8 @@
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
+#include <shlobj.h>
+
 namespace {
 
 static bool g_ready = false;
@@ -33,65 +35,64 @@ static std::string ModuleDir() {
   return path;
 }
 
-static bool FindWhisperFiles() {
-  std::string moduleDir = ModuleDir();
-  char cwd[MAX_PATH] = {};
-  GetCurrentDirectoryA(MAX_PATH, cwd);
-  std::vector<std::string> bases = {
-      moduleDir,
-      moduleDir + "\\..\\..",
-      cwd,
-  };
-  const char *cliNames[] = {
-      "dependencies\\whisper\\Release\\whisper-cli.exe",
-      "dependencies\\whisper\\whisper-cli.exe",
-      "dependencies\\whisper\\Release\\main.exe",
-      "dependencies\\whisper\\main.exe",
-      "whisper-cli.exe",
-      "main.exe",
-  };
-  const char *modelNames[] = {
-      "models\\ggml-tiny.bin",
-      "dependencies\\whisper\\models\\ggml-tiny.bin",
-      "dependencies\\whisper\\Release\\models\\ggml-tiny.bin",
-      "dependencies\\whisper\\ggml-tiny.bin",
-      "ggml-tiny.bin",
-  };
-
-  for (const std::string &base : bases) {
-    for (const char *name : cliNames) {
-      std::string candidate = base + "\\" + name;
-      if (FileExists(candidate.c_str())) {
-        strncpy_s(g_cliPath, candidate.c_str(), _TRUNCATE);
-        break;
-      }
-    }
-    if (g_cliPath[0])
-      break;
+static std::string AppDataWhisperDir() {
+  char path[MAX_PATH];
+  if (FAILED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
+    return "";
   }
-
-  for (const std::string &base : bases) {
-    for (const char *name : modelNames) {
-      std::string candidate = base + "\\" + name;
-      if (FileExists(candidate.c_str())) {
-        strncpy_s(g_modelPath, candidate.c_str(), _TRUNCATE);
-        break;
-      }
-    }
-    if (g_modelPath[0])
-      break;
-  }
-
-  if (!g_cliPath[0]) {
-    SetStatus("Missing whisper-cli.exe in dependencies\\whisper");
-    return false;
-  }
-  if (!g_modelPath[0]) {
-    SetStatus("Missing ggml-tiny.bin model");
-    return false;
-  }
-  return true;
+  std::string dir = std::string(path) + "\\CS2Overlay";
+  CreateDirectoryA(dir.c_str(), NULL);
+  dir += "\\whisper";
+  CreateDirectoryA(dir.c_str(), NULL);
+  return dir;
 }
+
+static bool FindWhisperFiles() {
+  std::string dir = AppDataWhisperDir();
+  if (dir.empty()) return false;
+
+  std::string cliPath = dir + "\\whisper-cli.exe";
+  std::string modelPath = dir + "\\ggml-tiny.bin";
+
+  if (!FileExists(cliPath.c_str()) || !FileExists(modelPath.c_str())) {
+    SetStatus("Downloading whisper dependencies (this may take a minute)...");
+    
+    std::string scriptPath = dir + "\\download.ps1";
+    FILE* f = nullptr;
+    fopen_s(&f, scriptPath.c_str(), "w");
+    if (f) {
+      fprintf(f, 
+        "$ProgressPreference = 'SilentlyContinue'\n"
+        "Invoke-WebRequest -Uri 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip' -OutFile 'whisper.zip'\n"
+        "Expand-Archive -Force 'whisper.zip' -DestinationPath .\n"
+        "Invoke-WebRequest -Uri 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin' -OutFile 'ggml-tiny.bin'\n"
+      );
+      fclose(f);
+      
+      char cmd[MAX_PATH * 2];
+      snprintf(cmd, sizeof(cmd), "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%s\"", scriptPath.c_str());
+      
+      STARTUPINFOA si = { sizeof(si) };
+      PROCESS_INFORMATION pi = {};
+      si.dwFlags = STARTF_USESHOWWINDOW;
+      si.wShowWindow = SW_HIDE;
+      if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, dir.c_str(), &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, 120000); // Wait up to 2 mins
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+      }
+    }
+  }
+
+  if (FileExists(cliPath.c_str()) && FileExists(modelPath.c_str())) {
+    strncpy_s(g_cliPath, cliPath.c_str(), _TRUNCATE);
+    strncpy_s(g_modelPath, modelPath.c_str(), _TRUNCATE);
+    return true;
+  }
+
+  return false;
+}
+
 
 static bool WriteWav(const char *path, const std::vector<float> &samples,
                      int sampleRate) {

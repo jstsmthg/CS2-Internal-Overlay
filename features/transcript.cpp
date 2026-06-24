@@ -314,15 +314,15 @@ static void AddMessage(const char *source, const char *author,
 
 static bool ParseChatLine(const std::string &line, std::string &author,
                           std::string &message) {
-  // CS2 chat messages use " : " (space-colon-space) as the delimiter.
+  // CS2 chat messages use ": " as the delimiter.
   // Reject lines that don't contain this pattern.
-  size_t chatSep = line.find(" : ");
+  size_t chatSep = line.find(": ");
   if (chatSep == std::string::npos)
     return false;
 
-  // Use the FIRST occurrence of " : " (author is before, message is after)
+  // Use the FIRST occurrence of ": " (author is before, message is after)
   author = Trim(line.substr(0, chatSep));
-  message = Trim(line.substr(chatSep + 3));
+  message = Trim(line.substr(chatSep + 2));
 
   // Strip optional team/all prefix: "[ALL] Player" or "[TEAM] Player" or " Player"
   size_t bracket = author.rfind(']');
@@ -342,8 +342,7 @@ static bool ParseChatLine(const std::string &line, std::string &author,
       "ConVar",        "SteamNetworking", "Host_Error",   "ChangeGameUI",
       "CGameClient",   "CNetworkSystem",  "S2C_CHALLENGE", "Connected to",
       "Connecting to", "Sending client",  "Loading ",     "Precaching",
-      "exec ",         "Unknown command", "\"",            "[",
-      "GameTypes",     "NET_",            "Server using",  "CSoundEmitter",
+      "exec ",         "Unknown command", "Server using",  "CSoundEmitter",
       "SV_",           "sv_",             "map_",          "cl_",
       "#",             "Error ",          "WARNING",       "WARN:",
       "INFO:",         "FATAL",           "Assert",        "Cmd_",
