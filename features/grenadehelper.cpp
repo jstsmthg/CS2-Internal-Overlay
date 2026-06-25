@@ -6,12 +6,7 @@
 
 namespace {
 
-struct GrenadeSpot {
-  char name[64];
-  int type;
-  Vector3 origin;
-  Vector3 angles;
-};
+// GrenadeSpot is now defined in grenadehelper.h
 
 static std::vector<GrenadeSpot> g_spots;
 static char g_loadedMap[64] = "";
@@ -261,6 +256,38 @@ static void ApplyAimAssist(uintptr_t clientBase, const GrenadeSpot *bestSpot,
 
 void grenadehelper::RequestSaveCurrentSpot() {
   g_saveRequested = true;
+}
+
+std::vector<GrenadeSpot>& grenadehelper::GetSpots() {
+  return g_spots;
+}
+
+void grenadehelper::DeleteSpot(int index) {
+  if (index >= 0 && index < g_spots.size()) {
+    g_spots.erase(g_spots.begin() + index);
+    SaveAllSpots();
+  }
+}
+
+void grenadehelper::SaveAllSpots() {
+  if (g_loadedMap[0] == '\0') return;
+  
+  char path[MAX_PATH];
+  CreateDirectoryA("grenades", nullptr);
+  snprintf(path, sizeof(path), "grenades\\%s.csv", g_loadedMap);
+
+  FILE *f = nullptr;
+  fopen_s(&f, path, "w");
+  if (!f) return;
+
+  for (const auto& spot : g_spots) {
+    fprintf(f, "%s;%s;%f;%f;%f;%f;%f\n",
+            spot.name, TypeName(spot.type),
+            spot.origin.x, spot.origin.y, spot.origin.z,
+            spot.angles.x, spot.angles.y);
+  }
+  
+  fclose(f);
 }
 
 const char *grenadehelper::CurrentMapName() {

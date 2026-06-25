@@ -117,6 +117,7 @@ foreach ($g in $selectedGuides) {
 
         if ($line -match '^\s*Id\s*=\s*"([^"]+)"') { $currentNode.Id = $matches[1] }
         elseif ($line -match '^\s*SubType\s*=\s*"([^"]+)"') { $currentNode.SubType = $matches[1] }
+        elseif ($line -match '^\s*Type\s*=\s*"([^"]+)"') { $currentNode.Type = $matches[1] }
         elseif ($line -match '^\s*MasterNodeId\s*=\s*"([^"]+)"') { $currentNode.MasterNodeId = $matches[1] }
         elseif ($line -match '^\s*Position\s*=\s*\[\s*([^,]+),\s*([^,]+),\s*([^\]]+)\]') {
             $currentNode.Position = @($matches[1].Trim(), $matches[2].Trim(), $matches[3].Trim())
@@ -132,7 +133,7 @@ foreach ($g in $selectedGuides) {
     }
     if ($currentNode -and $currentNode.Id) { $nodes[$currentNode.Id] = $currentNode }
 
-    $mainNodes = $nodes.Values | Where-Object { $_.SubType -eq 'main' }
+    $mainNodes = $nodes.Values | Where-Object { $_.SubType -eq 'main' -and $_.Type -eq 'grenade' }
     $outFile = Join-Path $outputDir "$($g.Map).csv"
     $count = 0
 
@@ -141,7 +142,8 @@ foreach ($g in $selectedGuides) {
         if ($aimId) {
             $aim = $nodes[$aimId]
             
-            $typeId = Convert-GrenadeType $main.GrenadeType
+            $typeStr = $main.GrenadeType
+            if ([string]::IsNullOrWhiteSpace($typeStr)) { $typeStr = "smoke" }
             $name = $main.Title
             if ([string]::IsNullOrWhiteSpace($name)) { $name = "Spot" }
             
@@ -154,7 +156,7 @@ foreach ($g in $selectedGuides) {
 
             # Check if this precise position/angle already exists in the CSV to avoid massive duplicates
             $duplicate = $false
-            $csvLine = "$typeId,$name,$($main.Position[0]),$($main.Position[1]),$($main.Position[2]),$($aim.Angles[0]),$($aim.Angles[1])"
+            $csvLine = "$name;$typeStr;$($main.Position[0]);$($main.Position[1]);$($main.Position[2]);$($aim.Angles[0]);$($aim.Angles[1])"
             
             if (Test-Path $outFile) {
                 $existing = Get-Content $outFile

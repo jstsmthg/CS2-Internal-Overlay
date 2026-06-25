@@ -616,6 +616,53 @@ static void RenderGrenadeHelperTab() {
     if (ImGui::Button("Save Current Position", ImVec2(-1, 30))) {
       grenadehelper::RequestSaveCurrentSpot();
     }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if (ImGui::CollapsingHeader("Manage Saved Spots")) {
+      auto& spots = grenadehelper::GetSpots();
+      if (spots.empty()) {
+        ImGui::TextColored(kTextDim, "No spots loaded.");
+      } else {
+        ImGui::BeginChild("##spots_list", ImVec2(-1, 150), true);
+        static int selectedSpot = -1;
+        if (selectedSpot >= spots.size()) selectedSpot = -1;
+
+        for (int i = 0; i < spots.size(); i++) {
+          char label[128];
+          snprintf(label, sizeof(label), "[%s] %s##%d", 
+                   (spots[i].type == 1 ? "Smoke" : spots[i].type == 2 ? "Flash" : spots[i].type == 3 ? "Molotov" : spots[i].type == 4 ? "HE" : "Unknown"), 
+                   spots[i].name, i);
+          
+          if (ImGui::Selectable(label, selectedSpot == i)) {
+            selectedSpot = i;
+          }
+        }
+        ImGui::EndChild();
+
+        if (selectedSpot != -1 && selectedSpot < spots.size()) {
+          auto& spot = spots[selectedSpot];
+          ImGui::InputText("Name", spot.name, sizeof(spot.name));
+          
+          int currentType = spot.type - 1;
+          if (currentType < 0) currentType = 0;
+          if (ImGui::Combo("Type", &currentType, "Smoke\0Flash\0Molotov\0HE\0")) {
+            spot.type = currentType + 1;
+          }
+
+          if (ImGui::Button("Save Changes", ImVec2(120, 0))) {
+            grenadehelper::SaveAllSpots();
+          }
+          ImGui::SameLine();
+          if (ImGui::Button("Delete Spot", ImVec2(120, 0))) {
+            grenadehelper::DeleteSpot(selectedSpot);
+            selectedSpot = -1;
+          }
+        }
+      }
+    }
   }
 
   ImGui::PopStyleVar();
