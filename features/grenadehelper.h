@@ -17,6 +17,7 @@ namespace grenadehelper {
 void RequestSaveCurrentSpot();
 const char *CurrentMapName();
 int LoadedSpotCount();
+void RefreshCurrentMap();
 void Render();
 
 std::vector<GrenadeSpot>& GetSpots();

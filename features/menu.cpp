@@ -616,6 +616,11 @@ static void RenderGrenadeHelperTab() {
     if (ImGui::Button("Save Current Position", ImVec2(-1, 30))) {
       grenadehelper::RequestSaveCurrentSpot();
     }
+    
+    ImGui::Spacing();
+    if (ImGui::Button("Refresh Spots from Cloud", ImVec2(-1, 24))) {
+      grenadehelper::RefreshCurrentMap();
+    }
 
     ImGui::Spacing();
     ImGui::Separator();

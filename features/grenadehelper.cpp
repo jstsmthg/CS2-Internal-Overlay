@@ -270,24 +270,30 @@ void grenadehelper::DeleteSpot(int index) {
 }
 
 void grenadehelper::SaveAllSpots() {
-  if (g_loadedMap[0] == '\0') return;
-  
   char path[MAX_PATH];
-  CreateDirectoryA("grenades", nullptr);
-  snprintf(path, sizeof(path), "grenades\\%s.csv", g_loadedMap);
+  if (!GetMapFilePath(path, sizeof(path))) return;
 
-  FILE *f = nullptr;
+  FILE* f = nullptr;
   fopen_s(&f, path, "w");
   if (!f) return;
 
   for (const auto& spot : g_spots) {
-    fprintf(f, "%s;%s;%f;%f;%f;%f;%f\n",
-            spot.name, TypeName(spot.type),
-            spot.origin.x, spot.origin.y, spot.origin.z,
-            spot.angles.x, spot.angles.y);
+    char typeName[32];
+    strncpy_s(typeName, sizeof(typeName), TypeName(spot.type), _TRUNCATE);
+    fprintf(f, "%s;%s;%.2f;%.2f;%.2f;%.2f;%.2f\n", spot.name, typeName,
+            spot.origin.x, spot.origin.y, spot.origin.z, spot.angles.x,
+            spot.angles.y);
   }
-  
   fclose(f);
+}
+
+void grenadehelper::RefreshCurrentMap() {
+    char path[MAX_PATH];
+    if (GetMapFilePath(path, sizeof(path))) {
+        DeleteFileA(path);
+    }
+    g_loadedMap[0] = '\0';
+    g_spots.clear();
 }
 
 const char *grenadehelper::CurrentMapName() {
